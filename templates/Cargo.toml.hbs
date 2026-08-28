@@ -1,0 +1,16 @@
+[package]
+name = "{{asyncapi.info.title | toSlug}}-sdk"
+version = "{{asyncapi.info.version}}"
+edition = "2021"
+description = "{{asyncapi.info.description}}"
+license = "{{asyncapi.info.license.name}}"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+tokio-tungstenite = "0.20"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+futures-util = "0.3"
+thiserror = "1.0"
+log = "0.4"
+chrono = "0.4"

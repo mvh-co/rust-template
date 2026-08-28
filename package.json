@@ -1,0 +1,20 @@
+{
+    "name": "@mvh-co/asyncapi-rust-template",
+    "version": "1.0.0",
+    "description": "Generic AsyncAPI template for generating a Rust WebSocket client",
+    "asyncapi": {
+        "generator": {
+            "templates": {
+                "cargo": "templates/Cargo.toml.hbs",
+                "lib": "templates/lib.hbs",
+                "mod": "templates/mod.hbs",
+                "types": "templates/types.hbs",
+                "client": "templates/client.hbs"
+            },
+            "output": {
+                "path": "./src"
+            },
+            "helpers": "helpers.js"
+        }
+    }
+}
