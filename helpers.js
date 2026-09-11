@@ -32,6 +32,24 @@ function isReceive(op) {
   return name.includes("Event") || name.includes("Result") || name.includes("Changed");
 }
 
+function resolveSchema(asyncapi, schemaRef) {
+  if (!schemaRef) return null;
+
+  if (typeof schemaRef === "object") {
+    if (schemaRef.$ref) return resolveSchema(asyncapi, schemaRef.$ref);
+    return schemaRef;
+  }
+
+  if (typeof schemaRef !== "string") return null;
+
+  if (schemaRef.startsWith("#/components/schemas/")) {
+    const name = getNameFromRef(schemaRef);
+    return asyncapi?.components?.schemas?.[name] || null;
+  }
+
+  return asyncapi?.components?.schemas?.[schemaRef] || null;
+}
+
 function resolveMessage(asyncapi, messageRef) {
   if (!messageRef) return null;
 
@@ -48,7 +66,7 @@ function resolveMessage(asyncapi, messageRef) {
   }
 
   if (messageRef.startsWith("#/channels/")) {
-    const parts = messageRef.split("/").filter(Boolean);
+    const parts = messageRef.replace(/^#\//, "").split("/").filter(Boolean);
     const channelName = parts[1];
     const messageName = parts[3];
     const channel = asyncapi?.channels?.[channelName];
@@ -178,16 +196,11 @@ module.exports = {
   getAllSchemas: function(asyncapi) {
     const schemas = {};
 
-    if (asyncapi?.components?.schemas) {
-      Object.entries(asyncapi.components.schemas).forEach(([name, schema]) => {
-        schemas[name] = schema;
-      });
-    }
-
     if (asyncapi?.components?.messages) {
       Object.entries(asyncapi.components.messages).forEach(([name, message]) => {
-        if (message?.payload) {
-          schemas[name] = message.payload;
+        const payload = message?.payload?.$ref ? resolveSchema(asyncapi, message.payload.$ref) : message?.payload;
+        if (payload) {
+          schemas[name] = payload;
         }
       });
     }
