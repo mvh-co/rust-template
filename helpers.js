@@ -278,52 +278,106 @@ module.exports = {
   },
 
   getAllOperations: function(asyncapi) {
-    return Object.keys(asyncapi?.operations || {});
-  },
-
-  getChannelMessages: function(asyncapi, channelName) {
-    const channel = asyncapi?.channels?.[channelName];
-    if (!channel) return [];
-
-    if (Array.isArray(channel.messages)) {
-      return channel.messages
-        .map(message => {
-          if (typeof message === "string") {
-            return asyncapi?.channels?.[channelName]?.messages?.find(item => item && typeof item === "object" && (item.name || getNameFromRef(item.$ref)) === message) || null;
-          }
-          return message;
-        })
-        .filter(Boolean);
+    if (asyncapi?.operations) {
+      return Object.entries(asyncapi.operations).map(([key, op]) => ({
+        ...op,
+        key,
+        action: op.action || (key.toLowerCase().includes('receive') ? 'receive' : undefined),
+      }));
     }
 
-    if (channel.messages && typeof channel.messages === "object") {
-      return Object.values(channel.messages)
-        .map(message => resolveMessage(asyncapi, message) || message)
-        .filter(Boolean);
-    }
-
-    return [];
-  },
-
-  getChannelOperations: function(asyncapi, channelName) {
     const operations = [];
-    if (!asyncapi?.operations) return operations;
-
-    Object.entries(asyncapi.operations).forEach(([key, op]) => {
-      if (!op) return;
-      const channelRef = typeof op.channel === "string" ? op.channel : op.channel?.$ref;
-      if (channelRef === `#/channels/${channelName}`) {
-        operations.push({ ...op, key });
+    Object.entries(asyncapi?.channels || {}).forEach(([channelName, channel]) => {
+      if (!channel) return;
+      if (channel.publish) {
+        operations.push({
+          ...channel.publish,
+          key: channel.publish.operationId || `${channelName}.publish`,
+          action: 'send',
+          channelName,
+        });
+      }
+      if (channel.subscribe) {
+        operations.push({
+          ...channel.subscribe,
+          key: channel.subscribe.operationId || `${channelName}.subscribe`,
+          action: 'receive',
+          channelName,
+        });
       }
     });
 
     return operations;
   },
 
-  getOperationMessages: function(asyncapi, op) {
-    if (!op?.messages) return [];
-    return op.messages
-      .map(messageRef => resolveMessage(asyncapi, messageRef))
+  getChannelMessages: function(asyncapi, channelName) {
+    const channel = asyncapi?.channels?.[channelName];
+    if (!channel) return [];
+
+    const messages = [];
+
+    if (channel.publish?.message) {
+      messages.push(channel.publish.message);
+    }
+    if (channel.subscribe?.message) {
+      messages.push(channel.subscribe.message);
+    }
+    if (Array.isArray(channel.messages)) {
+      messages.push(...channel.messages);
+    }
+    if (channel.messages && typeof channel.messages === "object") {
+      messages.push(...Object.values(channel.messages));
+    }
+
+    return messages
+      .map(message => resolveMessage(asyncapi, message) || message)
       .filter(Boolean);
+  },
+
+  getChannelOperations: function(asyncapi, channelName) {
+    const operations = [];
+    const channel = asyncapi?.channels?.[channelName];
+    if (!channel) return operations;
+
+    if (channel.publish) {
+      operations.push({ ...channel.publish, key: channel.publish.operationId || `${channelName}.publish`, action: 'send' });
+    }
+    if (channel.subscribe) {
+      operations.push({ ...channel.subscribe, key: channel.subscribe.operationId || `${channelName}.subscribe`, action: 'receive' });
+    }
+
+    if (asyncapi?.operations) {
+      Object.entries(asyncapi.operations).forEach(([key, op]) => {
+        if (!op) return;
+        const channelRef = typeof op.channel === "string" ? op.channel : op.channel?.$ref;
+        if (channelRef === `#/channels/${channelName}`) {
+          operations.push({ ...op, key, action: op.action || 'send' });
+        }
+      });
+    }
+
+    return operations;
+  },
+
+  getOperationMessages: function(asyncapi, op) {
+    if (!op) return [];
+
+    if (Array.isArray(op.messages)) {
+      return op.messages.map(messageRef => resolveMessage(asyncapi, messageRef)).filter(Boolean);
+    }
+
+    if (Array.isArray(op.message)) {
+      return op.message.map(messageRef => resolveMessage(asyncapi, messageRef)).filter(Boolean);
+    }
+
+    if (op.messages && typeof op.messages === "object") {
+      return Object.values(op.messages).map(messageRef => resolveMessage(asyncapi, messageRef) || messageRef).filter(Boolean);
+    }
+
+    if (op.message) {
+      return [resolveMessage(asyncapi, op.message) || op.message].filter(Boolean);
+    }
+
+    return [];
   },
 };

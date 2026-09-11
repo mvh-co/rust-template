@@ -1,0 +1,86 @@
+asyncapi: '2.6.0'
+info:
+  title: IQ Option Demo
+  version: '1.0.0'
+  description: Demo AsyncAPI 2.6 spec for the IQ Option WebSocket API.
+defaultContentType: application/json
+servers:
+  production:
+    url: wss://ws.iqoption.com/ws
+    protocol: ws
+    description: Production IQ Option WebSocket endpoint.
+channels:
+  market:
+    publish:
+      operationId: subscribeToMarket
+      summary: Subscribe to a market feed.
+      message:
+        $ref: '#/components/messages/subscribe'
+    subscribe:
+      operationId: receiveMarketQuote
+      summary: Receive market quote and heartbeat updates.
+      message:
+        $ref: '#/components/messages/quote'
+components:
+  messages:
+    subscribe:
+      name: subscribe
+      title: Subscribe
+      summary: Subscribe to a market feed.
+      payload:
+        type: object
+        required:
+          - name
+          - instrument_id
+        properties:
+          name:
+            type: string
+            const: subscribe
+          instrument_id:
+            type: integer
+            format: int64
+    unsubscribe:
+      name: unsubscribe
+      title: Unsubscribe
+      summary: Unsubscribe from a market feed.
+      payload:
+        type: object
+        required:
+          - name
+          - instrument_id
+        properties:
+          name:
+            type: string
+            const: unsubscribe
+          instrument_id:
+            type: integer
+            format: int64
+    quote:
+      name: quote
+      title: Quote
+      summary: Market quote update.
+      payload:
+        type: object
+        required:
+          - symbol
+          - price
+        properties:
+          symbol:
+            type: string
+          price:
+            type: number
+          volume:
+            type: integer
+            format: int64
+    heartbeat:
+      name: heartbeat
+      title: Heartbeat
+      summary: Server heartbeat.
+      payload:
+        type: object
+        required:
+          - timestamp
+        properties:
+          timestamp:
+            type: integer
+            format: int64
