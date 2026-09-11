@@ -19,7 +19,7 @@ type WsSender = futures_util::stream::SplitSink<
     tokio_tungstenite::tungstenite::Message,
 >;
 
-/// WebSocket client for {{asyncapi.info.title}}
+/// WebSocket client for {{asyncapi._json.info.title}}
 pub struct AsyncApiClient {
     url: String,
     sender: Option<Arc<futures_util::lock::Mutex<WsSender>>>,
@@ -98,13 +98,12 @@ impl AsyncApiClient {
         Ok(())
     }
 
-    {{#each asyncapi.operations}}
-    {{#with this}}
-    {{#if (isSend this)}}
-    /// Send a {{#if this.summary}}{{this.summary}}{{else}}{{@key}}{{/if}} operation
-    pub async fn {{@key | toSnakeCase}}(&self, payload: Value) -> Result<(), WsError> {
+    {% for operation in asyncapi | getAllOperations %}
+    {% if operation.action == 'send' %}
+    /// Send a {{ operation.summary if operation.summary else operation.key }} operation
+    pub async fn {{ operation.key | toSnakeCase }}(&self, payload: Value) -> Result<(), WsError> {
         let request_id = self.next_request_id();
-        let message_name = "{{#if this.name}}{{this.name}}{{else}}{{@key}}{{/if}}";
+        let message_name = "{{ operation.name or operation.operationId or operation.key }}";
         let mut message = json!({
             "name": message_name,
             "request_id": request_id,
@@ -120,9 +119,8 @@ impl AsyncApiClient {
         self.send_message(message).await?;
         Ok(())
     }
-    {{/if}}
-    {{/with}}
-    {{/each}}
+    {% endif %}
+    {% endfor %}
 }
 
 /// WebSocket errors

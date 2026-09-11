@@ -1,0 +1,24 @@
+{
+  "name": "@mvh-co/asyncapi-rust-template",
+  "version": "1.0.0",
+  "description": "Generic AsyncAPI template for generating a Rust WebSocket client",
+  "dependencies": {
+    "rust-template-filters": "file:./filters"
+  },
+  "generator": {
+    "parameters": {
+      "server": {
+        "description": "The server entry to use when constructing the generated example URL.",
+        "default": "production",
+        "required": false
+      }
+    },
+    "filters": [
+      "rust-template-filters"
+    ],
+    "supportedProtocols": [
+      "ws",
+      "wss"
+    ]
+  }
+}
