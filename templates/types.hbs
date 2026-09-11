@@ -4,15 +4,27 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
-{{#each (getAllSchemas asyncapi)}}
-{{#with (lookup ../asyncapi.components.messages @key)}}
-{{#if this.payload}}
-{{generateDoc this.payload.description}}
+{{#each asyncapi.components.messages as |message messageKey|}}
+{{#with (resolveMessagePayload @root.asyncapi message.payload)}}
+{{#if additionalProperties}}
+{{generateDoc description}}
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct {{@key | toPascalCase}} {
-    {{#each this.payload.properties}}
+pub struct {{messageKey | toPascalCase}}(pub serde_json::Value);
+{{else}}
+{{generateDoc description}}
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct {{messageKey | toPascalCase}} {
+    {{#each properties}}
     {{generateDoc this.description}}
+    {{#if (isConst this)}}
+    #[serde(default)]
     pub {{@key | toSnakeCase}}: {{mapType this.type this.format this}},
+    {{else if (isRequired ../required @key)}}
+    pub {{@key | toSnakeCase}}: {{mapType this.type this.format this}},
+    {{else}}
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub {{@key | toSnakeCase}}: Option<{{mapType this.type this.format this}}>,
+    {{/if}}
     {{/each}}
 }
 {{/if}}
