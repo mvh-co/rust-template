@@ -8,20 +8,16 @@ const readTemplate = relativePath =>
   fs.readFileSync(path.join(__dirname, '..', relativePath), 'utf8');
 
 test('client templates use the generated operation list and safe handler storage', () => {
-  const rootTemplate = readTemplate('templates/client.hbs');
-  const sourceTemplate = readTemplate('templates/src/ws/client.rs.hbs');
+  const sourceTemplate = readTemplate('templates/template/src/ws/client.rs.js');
 
-  for (const template of [rootTemplate, sourceTemplate]) {
-    assert.ok(template.includes('message_handlers: Arc<Mutex<HashMap<String, Arc<dyn Fn(Value) + Send + Sync>>>>'));
-    assert.ok(template.includes('sender: Option<Arc<futures_util::lock::Mutex<WsSender>>>'));
-    assert.ok(template.includes('Legacy compatibility for older AsyncAPI documents'));
-    assert.ok(template.includes('{{#each asyncapi.operations}}{{/each}}'));
-    assert.ok(template.includes('{{ operation.key | toSnakeCase }}'));
-    assert.ok(template.includes('TungsteniteError(#[from] tokio_tungstenite::tungstenite::Error)'));
-    assert.ok(!template.includes('IoError(#[from] std::io::Error)'));
-    assert.ok(!template.includes('getAllChannels asyncapi'));
-    assert.ok(!template.includes('getChannelOperations ../asyncapi'));
-  }
+  assert.ok(sourceTemplate.includes('message_handlers: Arc<Mutex<HashMap<String, Arc<dyn Fn(Value) + Send + Sync>>>>'));
+  assert.ok(sourceTemplate.includes('sender: Option<Arc<futures_util::lock::Mutex<WsSender>>>'));
+  assert.ok(sourceTemplate.includes('pub fn on<F>(&self, message_type: &str, handler: F)'));
+  assert.ok(sourceTemplate.includes('pub async fn ${methodName}(&self, payload: Value) -> Result<(), WsError>'));
+  assert.ok(sourceTemplate.includes('self.on("${messageName}", handler);'));
+  assert.ok(sourceTemplate.includes('TungsteniteError(#[from] tokio_tungstenite::tungstenite::Error)'));
+  assert.ok(!sourceTemplate.includes('IoError(#[from] std::io::Error)'));
+  assert.ok(!sourceTemplate.includes('Legacy compatibility for older AsyncAPI documents'));
 });
 
 test('helpers resolve AsyncAPI v3 operations and message refs', () => {
