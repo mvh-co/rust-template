@@ -4,12 +4,14 @@
   "description": "Generic AsyncAPI template for generating a Rust WebSocket client",
   "scripts": {
     "test": "node --test",
-    "test:iqoption": "npm install --prefix ./templates && npm install --prefix ./templates/template && rm -rf /tmp/out && npx @asyncapi/generator ./test/iqoption.yaml ./templates -o /tmp/out -p server=production && cargo check --manifest-path /tmp/out/Cargo.toml"
+    "test:iqoption": "npm install --prefix ./templates && npm install --prefix ./templates/template && rm -rf /tmp/out && npx @asyncapi/cli generate fromTemplate ./test/iqoption.yaml ./templates -o /tmp/out -p server=production && cargo check --manifest-path /tmp/out/Cargo.toml"
   },
   "devDependencies": {
-    "@asyncapi/generator": "2.11.0"
+    "@asyncapi/cli": "^6.0.2",
+    "@asyncapi/generator": "3.4.0"
   },
   "generator": {
+    "apiVersion": "v3",
     "parameters": {
       "server": {
         "description": "The server entry to use when constructing the generated example URL.",
@@ -37,7 +39,8 @@
       "getAllOperations": "helpers.js",
       "getChannelMessages": "helpers.js",
       "getChannelOperations": "helpers.js",
-      "getOperationMessages": "helpers.js"
+      "getOperationMessages": "helpers.js",
+      "getAllMessages": "helpers.js"
     },
     "supportedProtocols": [
       "ws",

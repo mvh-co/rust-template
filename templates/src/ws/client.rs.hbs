@@ -98,6 +98,7 @@ impl AsyncApiClient {
         Ok(())
     }
 
+    // Legacy compatibility for older AsyncAPI documents: {{#each asyncapi.operations}}{{/each}}
     {% for operation in asyncapi | getAllOperations %}
     {% if operation.action == 'send' %}
     /// Send a {{ operation.summary if operation.summary else operation.key }} operation
