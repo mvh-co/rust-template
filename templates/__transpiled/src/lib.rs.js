@@ -4,7 +4,11 @@ require('source-map-support/register');
 var generatorReactSdk = require('@asyncapi/generator-react-sdk');
 var jsxRuntime = require('/home/runner/.npm/_npx/0929aae77d023606/node_modules/react/cjs/react-jsx-runtime.production.min.js');
 
-const slugify = value => String(value || 'asyncapi-client').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'asyncapi-client';
+const slugify = value => {
+  const normalized = String(value || 'asyncapi-client').trim().toLowerCase();
+  const sanitized = Array.from(normalized).map(character => /[a-z0-9]/.test(character) ? character : '-').join('').split('-').filter(Boolean).join('-');
+  return sanitized || 'asyncapi-client';
+};
 function LibRs({
   asyncapi
 }) {

@@ -1,10 +1,20 @@
 import { File, Text } from '@asyncapi/generator-react-sdk';
 
-const slugify = (value) => String(value || 'asyncapi-client')
-  .trim()
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, '-')
-  .replace(/^-+|-+$/g, '') || 'asyncapi-client';
+const escapeTomlString = (value = '') => String(value)
+  .replace(/\\/g, '\\\\')
+  .replace(/"/g, '\\"');
+
+const slugify = (value) => {
+  const normalized = String(value || 'asyncapi-client').trim().toLowerCase();
+  const sanitized = Array.from(normalized)
+    .map(character => (/[a-z0-9]/.test(character) ? character : '-'))
+    .join('')
+    .split('-')
+    .filter(Boolean)
+    .join('-');
+
+  return sanitized || 'asyncapi-client';
+};
 
 export default function CargoToml({ asyncapi }) {
   const doc = asyncapi?._json || asyncapi || {};
@@ -19,8 +29,8 @@ export default function CargoToml({ asyncapi }) {
     `name = "${slugify(title)}-sdk"`,
     `version = "${version}"`,
     'edition = "2021"',
-    description ? `description = "${description.replace(/"/g, '\\"')}"` : '',
-    licenseName ? `license = "${licenseName.replace(/"/g, '\\"')}"` : '',
+    description ? `description = "${escapeTomlString(description)}"` : '',
+    licenseName ? `license = "${escapeTomlString(licenseName)}"` : '',
     '',
     '[dependencies]',
     'tokio = { version = "1.0", features = ["full"] }',

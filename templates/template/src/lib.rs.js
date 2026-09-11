@@ -1,10 +1,16 @@
 import { File, Text } from '@asyncapi/generator-react-sdk';
 
-const slugify = (value) => String(value || 'asyncapi-client')
-  .trim()
-  .toLowerCase()
-  .replace(/[^a-z0-9]+/g, '-')
-  .replace(/^-+|-+$/g, '') || 'asyncapi-client';
+const slugify = (value) => {
+  const normalized = String(value || 'asyncapi-client').trim().toLowerCase();
+  const sanitized = Array.from(normalized)
+    .map(character => (/[a-z0-9]/.test(character) ? character : '-'))
+    .join('')
+    .split('-')
+    .filter(Boolean)
+    .join('-');
+
+  return sanitized || 'asyncapi-client';
+};
 
 export default function LibRs({ asyncapi }) {
   const doc = asyncapi?._json || asyncapi || {};

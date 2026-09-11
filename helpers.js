@@ -664,11 +664,15 @@ function toSnakeCase(name) {
 
 function toSlug(name) {
   if (!name) return "";
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/--+/g, "-");
+  const normalized = String(name).trim();
+  const slug = Array.from(normalized.toLowerCase())
+    .map(character => (/[a-z0-9]/.test(character) ? character : '-'))
+    .join('')
+    .split('-')
+    .filter(Boolean)
+    .join('-');
+
+  return slug;
 }
 
 function generateDoc(description) {
