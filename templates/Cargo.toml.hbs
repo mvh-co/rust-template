@@ -2,12 +2,16 @@
 name = "{{asyncapi.info.title | toSlug}}-sdk"
 version = "{{asyncapi.info.version}}"
 edition = "2021"
+{{#if asyncapi.info.description}}
 description = "{{asyncapi.info.description}}"
+{{/if}}
+{{#if asyncapi.info.license.name}}
 license = "{{asyncapi.info.license.name}}"
+{{/if}}
 
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
-tokio-tungstenite = "0.20"
+tokio-tungstenite = { version = "0.23", features = ["native-tls"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 futures-util = "0.3"
