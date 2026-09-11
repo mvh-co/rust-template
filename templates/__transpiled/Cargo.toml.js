@@ -2,7 +2,7 @@
 
 require('source-map-support/register');
 var generatorReactSdk = require('@asyncapi/generator-react-sdk');
-var jsxRuntime = require('/home/runner/.npm/_npx/0929aae77d023606/node_modules/react/cjs/react-jsx-runtime.production.min.js');
+var jsxRuntime = require('/home/runner/work/rust-template/rust-template/node_modules/react/cjs/react-jsx-runtime.production.min.js');
 
 const escapeTomlString = (value = '') => String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 const slugify = value => {

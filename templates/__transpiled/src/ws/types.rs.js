@@ -2,7 +2,7 @@
 
 require('source-map-support/register');
 var generatorReactSdk = require('@asyncapi/generator-react-sdk');
-var jsxRuntime = require('/home/runner/.npm/_npx/0929aae77d023606/node_modules/react/cjs/react-jsx-runtime.production.min.js');
+var jsxRuntime = require('/home/runner/work/rust-template/rust-template/node_modules/react/cjs/react-jsx-runtime.production.min.js');
 
 const upperCamel = value => String(value || '').replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[^a-zA-Z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('') || 'Message';
 const toSnakeCase = value => String(value || '').replace(/([A-Z])/g, '_$1').toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_').replace(/^_+|_+$/g, '') || 'message';
@@ -57,16 +57,22 @@ const resolveMessagePayload = (doc, message) => {
 };
 const collectMessages = doc => {
   const messageMap = {};
+  const seenStructNames = new Set();
   const addMessage = (key, value) => {
     if (!value || typeof value !== 'object') return;
+    let messageName = key || value.name || 'message';
+    let resolvedValue = value;
     if (value.$ref && typeof value.$ref === 'string') {
       const refName = value.$ref.split('/').pop();
       const resolved = doc.components && doc.components.messages && doc.components.messages[refName] || null;
-      if (resolved) messageMap[refName] = resolved;
-      return;
+      if (!resolved) return;
+      messageName = refName;
+      resolvedValue = resolved;
     }
-    const name = key || value.name || 'message';
-    messageMap[name] = value;
+    const structName = upperCamel(messageName);
+    if (seenStructNames.has(structName)) return;
+    seenStructNames.add(structName);
+    messageMap[structName] = resolvedValue;
   };
   const componentMessages = doc.components && doc.components.messages || {};
   Object.entries(componentMessages).forEach(([key, value]) => addMessage(key, value));
@@ -78,7 +84,7 @@ const collectMessages = doc => {
         if (entry && typeof entry === 'object' && entry.$ref) {
           const refName = entry.$ref.split('/').pop();
           if (doc.components && doc.components.messages && doc.components.messages[refName]) {
-            messageMap[refName] = doc.components.messages[refName];
+            addMessage(refName, doc.components.messages[refName]);
           }
         }
       });

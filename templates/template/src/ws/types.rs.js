@@ -64,16 +64,27 @@ const resolveMessagePayload = (doc, message) => {
 
 const collectMessages = (doc) => {
   const messageMap = {};
+  const seenStructNames = new Set();
+
   const addMessage = (key, value) => {
     if (!value || typeof value !== 'object') return;
+
+    let messageName = key || value.name || 'message';
+    let resolvedValue = value;
+
     if (value.$ref && typeof value.$ref === 'string') {
       const refName = value.$ref.split('/').pop();
       const resolved = (doc.components && doc.components.messages && doc.components.messages[refName]) || null;
-      if (resolved) messageMap[refName] = resolved;
-      return;
+      if (!resolved) return;
+      messageName = refName;
+      resolvedValue = resolved;
     }
-    const name = key || value.name || 'message';
-    messageMap[name] = value;
+
+    const structName = upperCamel(messageName);
+    if (seenStructNames.has(structName)) return;
+
+    seenStructNames.add(structName);
+    messageMap[structName] = resolvedValue;
   };
 
   const componentMessages = (doc.components && doc.components.messages) || {};
@@ -87,7 +98,7 @@ const collectMessages = (doc) => {
         if (entry && typeof entry === 'object' && entry.$ref) {
           const refName = entry.$ref.split('/').pop();
           if (doc.components && doc.components.messages && doc.components.messages[refName]) {
-            messageMap[refName] = doc.components.messages[refName];
+            addMessage(refName, doc.components.messages[refName]);
           }
         }
       });

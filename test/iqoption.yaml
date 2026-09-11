@@ -18,6 +18,28 @@ channels:
         $ref: '#/components/messages/subscribe'
       quote:
         $ref: '#/components/messages/quote'
+      authResult:
+        name: authResult
+        title: AuthResult
+        summary: Authentication result event.
+        payload:
+          type: object
+          required:
+            - status
+          properties:
+            status:
+              type: string
+      coreEvent:
+        name: coreEvent
+        title: CoreEvent
+        summary: Core event payload.
+        payload:
+          type: object
+          required:
+            - event
+          properties:
+            event:
+              type: string
 components:
   messages:
     subscribe:
@@ -67,6 +89,33 @@ components:
           price:
             type: number
           volume:
+            type: integer
+            format: int64
+    AuthResult:
+      name: AuthResult
+      title: AuthResult
+      summary: Authentication payload from the server.
+      payload:
+        type: object
+        required:
+          - user_id
+          - status
+        properties:
+          user_id:
+            type: integer
+            format: int64
+          status:
+            type: string
+    CoreEvent:
+      name: CoreEvent
+      title: CoreEvent
+      summary: Core event payload from the server.
+      payload:
+        type: object
+        required:
+          - sequence
+        properties:
+          sequence:
             type: integer
             format: int64
     heartbeat:
