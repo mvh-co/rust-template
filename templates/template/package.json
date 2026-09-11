@@ -2,10 +2,8 @@
   "name": "@mvh-co/asyncapi-rust-template",
   "version": "1.0.0",
   "description": "Generic AsyncAPI template for generating a Rust WebSocket client",
-  "dependencies": {
-    "rust-template-filters": "file:./filters"
-  },
   "generator": {
+    "apiVersion": "v3",
     "parameters": {
       "server": {
         "description": "The server entry to use when constructing the generated example URL.",
@@ -13,9 +11,29 @@
         "required": false
       }
     },
-    "filters": [
-      "rust-template-filters"
-    ],
+    "filters": {
+      "mapType": "../../helpers.js",
+      "toPascalCase": "../../helpers.js",
+      "toSnakeCase": "../../helpers.js",
+      "toSlug": "../../helpers.js",
+      "getNameFromRef": "../../helpers.js",
+      "generateDoc": "../../helpers.js",
+      "resolveSchema": "../../helpers.js",
+      "resolveMessagePayload": "../../helpers.js",
+      "isRequired": "../../helpers.js",
+      "isConst": "../../helpers.js",
+      "isCommand": "../../helpers.js",
+      "isEvent": "../../helpers.js",
+      "isSend": "../../helpers.js",
+      "isReceive": "../../helpers.js",
+      "getAllSchemas": "../../helpers.js",
+      "getAllMessages": "../../helpers.js",
+      "getAllChannels": "../../helpers.js",
+      "getAllOperations": "../../helpers.js",
+      "getChannelMessages": "../../helpers.js",
+      "getChannelOperations": "../../helpers.js",
+      "getOperationMessages": "../../helpers.js"
+    },
     "supportedProtocols": [
       "ws",
       "wss"

@@ -1,25 +1,22 @@
-asyncapi: '2.6.0'
+asyncapi: 3.0.0
 info:
   title: IQ Option Demo
   version: '1.0.0'
-  description: Demo AsyncAPI 2.6 spec for the IQ Option WebSocket API.
+  description: Demo AsyncAPI 3.0 spec for the IQ Option WebSocket API.
 defaultContentType: application/json
 servers:
   production:
-    url: wss://ws.iqoption.com/ws
+    host: ws.iqoption.com
     protocol: ws
+    pathname: /ws
     description: Production IQ Option WebSocket endpoint.
 channels:
   market:
-    publish:
-      operationId: subscribeToMarket
-      summary: Subscribe to a market feed.
-      message:
+    address: market
+    messages:
+      subscribe:
         $ref: '#/components/messages/subscribe'
-    subscribe:
-      operationId: receiveMarketQuote
-      summary: Receive market quote and heartbeat updates.
-      message:
+      quote:
         $ref: '#/components/messages/quote'
 components:
   messages:
@@ -84,3 +81,16 @@ components:
           timestamp:
             type: integer
             format: int64
+  operations:
+    subscribeToMarket:
+      action: send
+      channel:
+        $ref: '#/channels/market'
+      messages:
+        - $ref: '#/channels/market/messages/subscribe'
+    receiveMarketQuote:
+      action: receive
+      channel:
+        $ref: '#/channels/market'
+      messages:
+        - $ref: '#/channels/market/messages/quote'
