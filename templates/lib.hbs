@@ -10,7 +10,7 @@
 //!
 //! #[tokio::main]
 //! async fn main() {
-//!     let mut client = AsyncApiClient::new("{{asyncapi.servers.production.host}}{{asyncapi.servers.production.pathname}}");
+//!     let mut client = AsyncApiClient::new("wss://{{asyncapi.servers.production.host}}{{asyncapi.servers.production.pathname}}");
 //!     client.connect().await.unwrap();
 //!     // Use client methods here
 //! }
