@@ -5,31 +5,18 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 {{#each (getAllSchemas asyncapi)}}
-{{#with (lookup ../asyncapi.components.schemas this)}}
-{{generateDoc this.description}}
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct {{this.name | toPascalCase}} {
-    {{#each this.properties}}
-    {{generateDoc this.description}}
-    pub {{@key | toSnakeCase}}: {{mapType this.type this.format}},
-    {{/each}}
-}
-{{/with}}
-{{/each}}
-
-{{#each asyncapi.components.messages}}
+{{#with (lookup ../asyncapi.components.messages @key)}}
 {{#if this.payload}}
-{{#with (lookup ../asyncapi.components.schemas (getNameFromRef this.payload.$ref))}}
 {{generateDoc this.payload.description}}
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct {{this.name | toPascalCase}} {
+pub struct {{@key | toPascalCase}} {
     {{#each this.payload.properties}}
     {{generateDoc this.description}}
-    pub {{@key | toSnakeCase}}: {{mapType this.type this.format}},
+    pub {{@key | toSnakeCase}}: {{mapType this.type this.format this}},
     {{/each}}
 }
-{{/with}}
 {{/if}}
+{{/with}}
 {{/each}}
 
 /// Generic message envelope for AsyncAPI
