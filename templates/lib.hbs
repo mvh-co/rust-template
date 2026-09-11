@@ -1,0 +1,19 @@
+//! {{asyncapi.info.title}} WebSocket SDK
+//!
+//! Generic Rust client generated from AsyncAPI specification (v{{asyncapi.info.version}}).
+//! This SDK provides a WebSocket client for the API described in the specification.
+//!
+//! ## Example
+//!
+//! ```rust,no_run
+//! use {{asyncapi.info.title | toSnakeCase}}_sdk::ws::client::AsyncApiClient;
+//!
+//! #[tokio::main]
+//! async fn main() {
+//!     let mut client = AsyncApiClient::new("{{asyncapi.servers.production.host}}{{asyncapi.servers.production.pathname}}");
+//!     client.connect().await.unwrap();
+//!     // Use client methods here
+//! }
+//! ```
+
+pub mod ws;
