@@ -8,6 +8,7 @@ The current AsyncAPI generator used by this repo targets AsyncAPI 2.6.x, so the 
 
 ```bash
 npm install
+rm -rf /tmp/out
 npx @asyncapi/generator ./test/iqoption.yaml ./templates -o /tmp/out -p server=production
 cargo check --manifest-path /tmp/out/Cargo.toml
 ```
@@ -17,6 +18,7 @@ The generated client includes `send_*` methods for publish/send operations and a
 ## Template usage
 
 ```bash
+rm -rf <output-dir>
 npx @asyncapi/generator <asyncapi-file> ./templates -o <output-dir> -p server=production
 ```
 

@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
 {% for messageKey, message in asyncapi.components.messages %}
-{% set payload = resolveMessagePayload(asyncapi, message.payload) %}
+{% set payload = message.payload | resolveMessagePayload(asyncapi) %}
 {% if payload and payload.additionalProperties %}
 {{ generateDoc(payload.description) }}
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

@@ -4,14 +4,69 @@ function getNameFromRef(ref) {
   return parts[parts.length - 1] || "";
 }
 
+function unwrapAsyncApiValue(value) {
+  if (typeof value === "function") {
+    try {
+      return value();
+    } catch (error) {
+      return value;
+    }
+  }
+
+  if (value && typeof value === "object" && value._json) {
+    return value._json;
+  }
+
+  return value;
+}
+
+function asPlainObject(value) {
+  const unwrapped = unwrapAsyncApiValue(value);
+
+  if (!unwrapped || typeof unwrapped !== "object") {
+    return {};
+  }
+
+  if (unwrapped._json) {
+    return { ...unwrapped._json, ...unwrapped };
+  }
+
+  return unwrapped;
+}
+
+function getOperationKey(op, fallback = "") {
+  const plain = asPlainObject(op);
+  const id = typeof op?.id === "function" ? op.id() : plain.id;
+  return id || plain.operationId || plain.name || fallback || "";
+}
+
+function getOperationName(op, fallback = "") {
+  const plain = asPlainObject(op);
+  const name = typeof op?.name === "function" ? op.name() : plain.name;
+  return name || getOperationKey(op, fallback) || "";
+}
+
+function getOperationSummary(op) {
+  const plain = asPlainObject(op);
+  return typeof op?.summary === "function" ? op.summary() : plain.summary || "";
+}
+
+function getOperationAction(op, fallback = "") {
+  const plain = asPlainObject(op);
+  const action = typeof op?.action === "function" ? op.action() : plain.action;
+  return action || fallback || "";
+}
+
 function isSend(op) {
   if (!op) return false;
 
-  if (op.action) {
-    return op.action === "send" || op.action === "request";
+  const plain = asPlainObject(op);
+  const action = getOperationAction(op);
+  if (action) {
+    return action === "send" || action === "request";
   }
 
-  const name = op.name || getNameFromRef(op.$ref);
+  const name = getOperationName(op, getNameFromRef(plain.$ref));
   return (
     name.includes("Command") ||
     name.includes("Request") ||
@@ -24,42 +79,54 @@ function isSend(op) {
 function isReceive(op) {
   if (!op) return false;
 
-  if (op.action) {
-    return op.action === "receive" || op.action === "reply";
+  const plain = asPlainObject(op);
+  const action = getOperationAction(op);
+  if (action) {
+    return action === "receive" || action === "reply";
   }
 
-  const name = op.name || getNameFromRef(op.$ref);
+  const name = getOperationName(op, getNameFromRef(plain.$ref));
   return name.includes("Event") || name.includes("Result") || name.includes("Changed");
 }
 
 function resolveSchema(asyncapi, schemaRef) {
-  if (!schemaRef) return null;
+  const normalizedRef = unwrapAsyncApiValue(schemaRef);
+  if (!normalizedRef) return null;
 
-  if (typeof schemaRef === "object") {
-    if (schemaRef.$ref) return resolveSchema(asyncapi, schemaRef.$ref);
-    return schemaRef;
+  if (typeof normalizedRef === "object") {
+    if (normalizedRef.$ref) return resolveSchema(asyncapi, normalizedRef.$ref);
+    return normalizedRef;
   }
 
-  if (typeof schemaRef !== "string") return null;
+  if (typeof normalizedRef !== "string") return null;
 
-  if (schemaRef.startsWith("#/components/schemas/")) {
-    const name = getNameFromRef(schemaRef);
+  if (normalizedRef.startsWith("#/components/schemas/")) {
+    const name = getNameFromRef(normalizedRef);
     return asyncapi?.components?.schemas?.[name] || null;
   }
 
-  return asyncapi?.components?.schemas?.[schemaRef] || null;
+  return asyncapi?.components?.schemas?.[normalizedRef] || null;
 }
 
-function resolveMessagePayload(asyncapi, payload) {
-  if (!payload) return null;
+function resolveMessagePayload(asyncapiOrPayload, payloadOrAsyncapi) {
+  const isDirectCall =
+    asyncapiOrPayload &&
+    typeof asyncapiOrPayload === "object" &&
+    (asyncapiOrPayload.components || asyncapiOrPayload.channels || asyncapiOrPayload.messages);
 
-  if (typeof payload === "object") {
-    if (payload.$ref) return resolveSchema(asyncapi, payload.$ref);
-    return payload;
+  const asyncapi = isDirectCall ? asyncapiOrPayload : payloadOrAsyncapi;
+  const payload = isDirectCall ? payloadOrAsyncapi : asyncapiOrPayload;
+  const normalizedPayload = unwrapAsyncApiValue(payload);
+
+  if (!normalizedPayload) return null;
+
+  if (typeof normalizedPayload === "object") {
+    if (normalizedPayload.$ref) return resolveSchema(asyncapi, normalizedPayload.$ref);
+    return normalizedPayload;
   }
 
-  if (typeof payload === "string") {
-    return resolveSchema(asyncapi, payload);
+  if (typeof normalizedPayload === "string") {
+    return resolveSchema(asyncapi, normalizedPayload);
   }
 
   return null;
@@ -74,25 +141,26 @@ function isConstProperty(property) {
 }
 
 function resolveMessage(asyncapi, messageRef) {
-  if (!messageRef) return null;
+  const normalizedMessageRef = unwrapAsyncApiValue(messageRef);
+  if (!normalizedMessageRef) return null;
 
-  if (typeof messageRef === "object") {
-    if (messageRef.$ref) return resolveMessage(asyncapi, messageRef.$ref);
-    return messageRef;
+  if (typeof normalizedMessageRef === "object") {
+    if (normalizedMessageRef.$ref) return resolveMessage(asyncapi, normalizedMessageRef.$ref);
+    return normalizedMessageRef;
   }
 
-  if (typeof messageRef !== "string") return null;
+  if (typeof normalizedMessageRef !== "string") return null;
 
-  if (messageRef.startsWith("#/components/messages/")) {
-    const name = getNameFromRef(messageRef);
+  if (normalizedMessageRef.startsWith("#/components/messages/")) {
+    const name = getNameFromRef(normalizedMessageRef);
     return asyncapi?.components?.messages?.[name] || null;
   }
 
-  if (messageRef.startsWith("#/channels/")) {
-    const parts = messageRef.replace(/^#\//, "").split("/").filter(Boolean);
+  if (normalizedMessageRef.startsWith("#/channels/")) {
+    const parts = normalizedMessageRef.replace(/^#\//, "").split("/").filter(Boolean);
     const channelName = parts[1];
     const messageName = parts[3];
-    const channel = asyncapi?.channels?.[channelName];
+    const channel = asyncapi?.channels?.[channelName] || (typeof asyncapi?.channels === "function" ? asyncapi.channels()[channelName] : null);
     const messages = channel?.messages || {};
 
     if (Array.isArray(messages)) {
@@ -100,7 +168,8 @@ function resolveMessage(asyncapi, messageRef) {
         messages.find(message => {
           if (typeof message === "string") return message === messageName;
           if (message && typeof message === "object") {
-            return (message.name || getNameFromRef(message.$ref)) === messageName;
+            const plain = asPlainObject(message);
+            return (plain.name || getNameFromRef(plain.$ref)) === messageName;
           }
           return false;
         }) || null
@@ -110,7 +179,7 @@ function resolveMessage(asyncapi, messageRef) {
     return messages[messageName] || null;
   }
 
-  return asyncapi?.components?.messages?.[messageRef] || null;
+  return asyncapi?.components?.messages?.[normalizedMessageRef] || null;
 }
 
 module.exports = {
@@ -232,16 +301,18 @@ module.exports = {
 
   isCommand: function(message) {
     if (!message) return false;
+    const plain = asPlainObject(message);
     const getRefName = this?.getNameFromRef || getNameFromRef;
-    const name = message.name || getRefName(message.$ref);
-    return isSend({ ...message, name });
+    const name = getOperationName(message, getRefName(plain.$ref));
+    return isSend({ ...plain, name, action: getOperationAction(message) });
   },
 
   isEvent: function(message) {
     if (!message) return false;
+    const plain = asPlainObject(message);
     const getRefName = this?.getNameFromRef || getNameFromRef;
-    const name = message.name || getRefName(message.$ref);
-    return isReceive({ ...message, name });
+    const name = getOperationName(message, getRefName(plain.$ref));
+    return isReceive({ ...plain, name, action: getOperationAction(message) });
   },
 
   isSend,
@@ -250,18 +321,21 @@ module.exports = {
   getAllSchemas: function(asyncapi) {
     const schemas = new Set();
     const getRefName = this?.getNameFromRef || getNameFromRef;
+    const components = asPlainObject(asyncapi?.components);
 
-    if (asyncapi?.components?.schemas) {
-      Object.keys(asyncapi.components.schemas).forEach(name => schemas.add(name));
+    if (components.schemas) {
+      Object.keys(components.schemas).forEach(name => schemas.add(name));
     }
 
-    if (asyncapi?.components?.messages) {
-      Object.values(asyncapi.components.messages).forEach(msg => {
-        if (msg.payload?.$ref) {
-          schemas.add(getRefName(msg.payload.$ref));
+    if (components.messages) {
+      Object.values(components.messages).forEach(msg => {
+        const plain = asPlainObject(msg);
+        const payload = unwrapAsyncApiValue(plain.payload ?? msg?.payload);
+        if (payload?.$ref) {
+          schemas.add(getRefName(payload.$ref));
         }
-        if (msg.payload?.properties) {
-          Object.values(msg.payload.properties).forEach(prop => {
+        if (payload?.properties) {
+          Object.values(payload.properties).forEach(prop => {
             if (prop.$ref) {
               schemas.add(getRefName(prop.$ref));
             }
@@ -274,110 +348,168 @@ module.exports = {
   },
 
   getAllChannels: function(asyncapi) {
-    return Object.keys(asyncapi?.channels || {});
+    const channels = typeof asyncapi?.channels === "function" ? asyncapi.channels() : asyncapi?.channels || {};
+    return Object.keys(channels || {});
   },
 
   getAllOperations: function(asyncapi) {
-    if (asyncapi?.operations) {
-      return Object.entries(asyncapi.operations).map(([key, op]) => ({
-        ...op,
-        key,
-        action: op.action || (key.toLowerCase().includes('receive') ? 'receive' : undefined),
-      }));
+    const rawOperations = typeof asyncapi?.operations === "function" ? asyncapi.operations() : asyncapi?.operations;
+    if (rawOperations) {
+      const entries = typeof rawOperations.all === "function" ? rawOperations.all() : Object.entries(rawOperations || {});
+      return entries
+        .map(([key, op]) => {
+          const plain = asPlainObject(op);
+          return {
+            ...plain,
+            key: getOperationKey(op, key),
+            name: getOperationName(op, key),
+            summary: getOperationSummary(op) || plain.summary || "",
+            action: getOperationAction(op, key.toLowerCase().includes("receive") ? "receive" : undefined),
+          };
+        })
+        .filter(operation => operation.key);
     }
 
     const operations = [];
-    Object.entries(asyncapi?.channels || {}).forEach(([channelName, channel]) => {
+    const channels = typeof asyncapi?.channels === "function" ? asyncapi.channels() : asyncapi?.channels || {};
+    Object.entries(channels || {}).forEach(([channelName, channel]) => {
       if (!channel) return;
-      if (channel.publish) {
+      const plain = asPlainObject(channel);
+      const publishOperation = unwrapAsyncApiValue(plain.publish ?? channel?.publish);
+      if (publishOperation) {
+        const publishPlain = asPlainObject(publishOperation);
         operations.push({
-          ...channel.publish,
-          key: channel.publish.operationId || `${channelName}.publish`,
-          action: 'send',
+          ...publishPlain,
+          key: getOperationKey(publishOperation, `${channelName}.publish`),
+          name: getOperationName(publishOperation, `${channelName}.publish`),
+          summary: getOperationSummary(publishOperation) || publishPlain.summary || "",
+          action: "send",
           channelName,
         });
       }
-      if (channel.subscribe) {
+      const subscribeOperation = unwrapAsyncApiValue(plain.subscribe ?? channel?.subscribe);
+      if (subscribeOperation) {
+        const subscribePlain = asPlainObject(subscribeOperation);
         operations.push({
-          ...channel.subscribe,
-          key: channel.subscribe.operationId || `${channelName}.subscribe`,
-          action: 'receive',
+          ...subscribePlain,
+          key: getOperationKey(subscribeOperation, `${channelName}.subscribe`),
+          name: getOperationName(subscribeOperation, `${channelName}.subscribe`),
+          summary: getOperationSummary(subscribeOperation) || subscribePlain.summary || "",
+          action: "receive",
           channelName,
         });
       }
     });
 
-    return operations;
+    return operations.filter(operation => operation.key);
   },
 
   getChannelMessages: function(asyncapi, channelName) {
-    const channel = asyncapi?.channels?.[channelName];
+    const channels = typeof asyncapi?.channels === "function" ? asyncapi.channels() : asyncapi?.channels || {};
+    const channel = unwrapAsyncApiValue(channels?.[channelName]);
     if (!channel) return [];
 
+    const plain = asPlainObject(channel);
     const messages = [];
+    const publishOperation = unwrapAsyncApiValue(plain.publish ?? channel?.publish);
+    const subscribeOperation = unwrapAsyncApiValue(plain.subscribe ?? channel?.subscribe);
 
-    if (channel.publish?.message) {
-      messages.push(channel.publish.message);
+    if (publishOperation) {
+      const publishPlain = asPlainObject(publishOperation);
+      const publishMessage = unwrapAsyncApiValue(publishPlain.message ?? publishOperation?.message);
+      if (publishMessage) messages.push(publishMessage);
     }
-    if (channel.subscribe?.message) {
-      messages.push(channel.subscribe.message);
+    if (subscribeOperation) {
+      const subscribePlain = asPlainObject(subscribeOperation);
+      const subscribeMessage = unwrapAsyncApiValue(subscribePlain.message ?? subscribeOperation?.message);
+      if (subscribeMessage) messages.push(subscribeMessage);
     }
-    if (Array.isArray(channel.messages)) {
-      messages.push(...channel.messages);
+    if (Array.isArray(plain.messages)) {
+      messages.push(...plain.messages);
     }
-    if (channel.messages && typeof channel.messages === "object") {
-      messages.push(...Object.values(channel.messages));
+    if (plain.messages && typeof plain.messages === "object") {
+      messages.push(...Object.values(plain.messages));
     }
 
     return messages
-      .map(message => resolveMessage(asyncapi, message) || message)
+      .map(message => resolveMessage(asyncapi, message) || unwrapAsyncApiValue(message))
       .filter(Boolean);
   },
 
   getChannelOperations: function(asyncapi, channelName) {
     const operations = [];
-    const channel = asyncapi?.channels?.[channelName];
+    const channels = typeof asyncapi?.channels === "function" ? asyncapi.channels() : asyncapi?.channels || {};
+    const channel = unwrapAsyncApiValue(channels[channelName]);
     if (!channel) return operations;
 
-    if (channel.publish) {
-      operations.push({ ...channel.publish, key: channel.publish.operationId || `${channelName}.publish`, action: 'send' });
-    }
-    if (channel.subscribe) {
-      operations.push({ ...channel.subscribe, key: channel.subscribe.operationId || `${channelName}.subscribe`, action: 'receive' });
-    }
+    const plain = asPlainObject(channel);
+    const addOperation = (value, fallbackAction) => {
+      const op = unwrapAsyncApiValue(value);
+      if (!op) return;
+      const opPlain = asPlainObject(op);
+      operations.push({
+        ...opPlain,
+        key: getOperationKey(op, `${channelName}.${fallbackAction}`),
+        name: getOperationName(op, `${channelName}.${fallbackAction}`),
+        action: getOperationAction(op, fallbackAction),
+        summary: getOperationSummary(op) || opPlain.summary || "",
+      });
+    };
 
-    if (asyncapi?.operations) {
-      Object.entries(asyncapi.operations).forEach(([key, op]) => {
+    addOperation(plain.publish, "send");
+    addOperation(plain.subscribe, "receive");
+
+    const rawOperations = typeof asyncapi?.operations === "function" ? asyncapi.operations() : asyncapi?.operations;
+    if (rawOperations) {
+      const opEntries = typeof rawOperations.all === "function" ? rawOperations.all() : Object.entries(rawOperations || {});
+      opEntries.forEach(([key, op]) => {
         if (!op) return;
-        const channelRef = typeof op.channel === "string" ? op.channel : op.channel?.$ref;
-        if (channelRef === `#/channels/${channelName}`) {
-          operations.push({ ...op, key, action: op.action || 'send' });
+        const opPlain = asPlainObject(op);
+        const channelRef = unwrapAsyncApiValue(opPlain.channel ?? op?.channel);
+        const resolvedChannelRef = typeof channelRef === "string" ? channelRef : channelRef?.$ref;
+        if (resolvedChannelRef === `#/channels/${channelName}` || resolvedChannelRef === channelName) {
+          operations.push({
+            ...opPlain,
+            key: getOperationKey(op, key),
+            name: getOperationName(op, key),
+            action: getOperationAction(op, "send"),
+            summary: getOperationSummary(op) || opPlain.summary || "",
+          });
         }
       });
     }
 
-    return operations;
+    return operations.filter(operation => operation.key);
   },
 
   getOperationMessages: function(asyncapi, op) {
     if (!op) return [];
 
-    if (Array.isArray(op.messages)) {
-      return op.messages.map(messageRef => resolveMessage(asyncapi, messageRef)).filter(Boolean);
-    }
+    const plain = asPlainObject(op);
+    const candidates = [];
 
-    if (Array.isArray(op.message)) {
-      return op.message.map(messageRef => resolveMessage(asyncapi, messageRef)).filter(Boolean);
-    }
+    const pushCandidates = (value, asObjectMap = false) => {
+      if (!value) return;
+      if (Array.isArray(value)) {
+        candidates.push(...value);
+        return;
+      }
+      if (typeof value === "object") {
+        if (asObjectMap) {
+          candidates.push(...Object.values(value));
+          return;
+        }
+        candidates.push(value);
+        return;
+      }
+      candidates.push(value);
+    };
 
-    if (op.messages && typeof op.messages === "object") {
-      return Object.values(op.messages).map(messageRef => resolveMessage(asyncapi, messageRef) || messageRef).filter(Boolean);
-    }
+    pushCandidates(unwrapAsyncApiValue(plain.messages ?? op?.messages), true);
+    pushCandidates(unwrapAsyncApiValue(plain.message ?? op?.message));
 
-    if (op.message) {
-      return [resolveMessage(asyncapi, op.message) || op.message].filter(Boolean);
-    }
-
-    return [];
+    return candidates
+      .map(messageRef => resolveMessage(asyncapi, messageRef) || unwrapAsyncApiValue(messageRef))
+      .filter(Boolean);
   },
 };

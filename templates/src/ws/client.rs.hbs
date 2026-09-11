@@ -98,7 +98,7 @@ impl AsyncApiClient {
         Ok(())
     }
 
-    {% for operation in getAllOperations(asyncapi) %}
+    {% for operation in asyncapi | getAllOperations %}
     {% if operation.action == 'send' %}
     /// Send a {{ operation.summary if operation.summary else operation.key }} operation
     pub async fn {{ operation.key | toSnakeCase }}(&self, payload: Value) -> Result<(), WsError> {
