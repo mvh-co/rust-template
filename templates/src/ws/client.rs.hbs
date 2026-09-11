@@ -1,0 +1,176 @@
+// Auto-generated WebSocket client from AsyncAPI specification
+// DO NOT EDIT MANUALLY
+
+use tokio_tungstenite::connect_async;
+use futures_util::{SinkExt, StreamExt, lock::Mutex};
+use serde_json::{Value, json};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    error::Error,
+};
+use thiserror::Error;
+use log::{info, debug, error};
+
+/// WebSocket client for {{asyncapi.info.title}}
+pub struct AsyncApiClient {
+    url: String,
+    sender: Option<Mutex<futures_util::stream::SplitSink<tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>, tokio_tungstenite::tungstenite::Message>>>,
+    request_id_counter: i64,
+    message_handlers: HashMap<String, Box<dyn Fn(Value) + Send + Sync>>,
+}
+
+impl AsyncApiClient {
+    /// Create a new client instance
+    pub fn new(url: &str) -> Self {
+        AsyncApiClient {
+            url: url.to_string(),
+            sender: None,
+            request_id_counter: 0,
+            message_handlers: HashMap::new(),
+        }
+    }
+
+    /// Connect to the WebSocket server
+    pub async fn connect(&mut self) -> Result<(), WsError> {
+        let (ws_stream, _) = connect_async(&self.url)
+            .await
+            .map_err(|e| WsError::ConnectionError(e.to_string()))?;
+
+        let (sender, mut receiver) = ws_stream.split();
+        self.sender = Some(Mutex::new(sender));
+
+        // Spawn a task to handle incoming messages
+        let handlers = self.message_handlers.clone();
+        tokio::spawn(async move {
+            while let Some(msg) = receiver.next().await {
+                match msg {
+                    Ok(tokio_tungstenite::tungstenite::Message::Text(text)) => {
+                        if let Ok(value) = serde_json::from_str::<Value>(&text) {
+                            debug!("Received message: {}", text);
+                            // Handle message based on its type/name
+                            if let Some(name) = value.get("name").and_then(|v| v.as_str()) {
+                                if let Some(handler) = handlers.get(name) {
+                                    handler(value);
+                                }
+                            }
+                        }
+                    }
+                    Ok(_) => {}
+                    Err(e) => error!("WebSocket error: {}", e),
+                }
+            }
+        });
+
+        Ok(())
+    }
+
+    /// Register a handler for a specific message type
+    pub fn on<F>(&mut self, message_type: &str, handler: F)
+    where
+        F: Fn(Value) + Send + Sync + 'static,
+    {
+        self.message_handlers.insert(message_type.to_string(), Box::new(handler));
+    }
+
+    /// Generate a new request ID
+    fn next_request_id(&mut self) -> String {
+        self.request_id_counter += 1;
+        self.request_id_counter.to_string()
+    }
+
+    /// Send a raw message
+    pub async fn send_message(&self, message: Value) -> Result<(), WsError> {
+        let sender = self.sender.as_ref().ok_or(WsError::NotConnected)?;
+        let mut sender = sender.lock().await;
+        sender.send(tokio_tungstenite::tungstenite::Message::Text(
+            serde_json::to_string(&message)?,
+        )).await?;
+        Ok(())
+    }
+
+    {{#each (getAllOperations asyncapi)}}
+    {{#with (lookup ../asyncapi.operations this)}}
+    /// Send a {{this.operationId | toSnakeCase}} operation
+    pub async fn {{this.operationId | toSnakeCase}}(
+        &mut self,
+        {{#if this.messages}}
+            {{#each this.messages}}
+                {{#if (isCommand this)}}
+                    payload: Value,
+                {{/if}}
+            {{/each}}
+        {{else}}
+            payload: Value,
+        {{/if}}
+    ) -> Result<(), WsError> {
+        if self.sender.is_none() {
+            self.connect().await?;
+        }
+
+        let request_id = self.next_request_id();
+        let mut message = json!({
+            "request_id": request_id,
+            "local_time": chrono::Utc::now().timestamp_millis()
+        });
+
+        // Merge payload into message
+        if let Value::Object(payload_obj) = payload {
+            for (k, v) in payload_obj {
+                message[k] = v;
+            }
+        }
+
+        self.send_message(message).await?;
+        Ok(())
+    }
+    {{/with}}
+    {{/each}}
+
+    {{#each (getAllChannels asyncapi)}}
+    {{#with (lookup ../asyncapi.channels this)}}
+    {{#each (getChannelOperations ../asyncapi this.address)}}
+    /// {{this.summary}} ({{this.action}})
+    pub async fn {{this.operationId | toSnakeCase}}(
+        &mut self,
+        payload: Value,
+    ) -> Result<(), WsError> {
+        if self.sender.is_none() {
+            self.connect().await?;
+        }
+
+        let request_id = self.next_request_id();
+        let mut message = json!({
+            "request_id": request_id,
+            "local_time": chrono::Utc::now().timestamp_millis()
+        });
+
+        // Merge payload into message
+        if let Value::Object(payload_obj) = payload {
+            for (k, v) in payload_obj {
+                message[k] = v;
+            }
+        }
+
+        self.send_message(message).await?;
+        Ok(())
+    }
+    {{/each}}
+    {{/with}}
+    {{/each}}
+}
+
+/// WebSocket errors
+#[derive(Error, Debug)]
+pub enum WsError {
+    #[error("Connection error: {0}")]
+    ConnectionError(String),
+    #[error("Not connected to WebSocket")]
+    NotConnected,
+    #[error("Serialization error: {0}")]
+    SerializationError(#[from] serde_json::Error),
+    #[error("IO error: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("Tungstenite error: {0}")]
+    TungsteniteError(#[from] tokio_tungstenite::tungstenite::Error),
+}

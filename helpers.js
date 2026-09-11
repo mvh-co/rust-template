@@ -73,13 +73,15 @@ function resolveMessage(asyncapi, messageRef) {
     const messages = channel?.messages || {};
 
     if (Array.isArray(messages)) {
-      return messages.find(message => {
-        if (typeof message === "string") return message === messageName;
-        if (message && typeof message === "object") {
-          return (message.name || getNameFromRef(message.$ref)) === messageName;
-        }
-        return false;
-      }) || null;
+      return (
+        messages.find(message => {
+          if (typeof message === "string") return message === messageName;
+          if (message && typeof message === "object") {
+            return (message.name || getNameFromRef(message.$ref)) === messageName;
+          }
+          return false;
+        }) || null
+      );
     }
 
     return messages[messageName] || null;
@@ -89,7 +91,6 @@ function resolveMessage(asyncapi, messageRef) {
 }
 
 module.exports = {
-  // Maps AsyncAPI types to Rust types
   mapType: function(type, format, schema) {
     const resolvedType = type || schema?.type;
     const resolvedFormat = format || schema?.format;
@@ -136,7 +137,6 @@ module.exports = {
     return "serde_json::Value";
   },
 
-  // Converts a name to PascalCase (for struct/enum names)
   toPascalCase: function(name) {
     if (!name) return "";
     return name
@@ -147,7 +147,6 @@ module.exports = {
       .join("");
   },
 
-  // Converts a name to snake_case (for variables/functions)
   toSnakeCase: function(name) {
     if (!name) return "";
     return name
@@ -157,7 +156,6 @@ module.exports = {
       .replace(/^_+|_+$/g, "");
   },
 
-  // Converts a name to a slug (e.g., "Hello World" -> "hello-world")
   toSlug: function(name) {
     if (!name) return "";
     return name
@@ -167,10 +165,10 @@ module.exports = {
       .replace(/--+/g, "-");
   },
 
-  // Extracts the name from a $ref (e.g., "#/components/messages/AuthenticateCommand" -> "AuthenticateCommand")
-  getNameFromRef: getNameFromRef,
+  getNameFromRef: function(ref) {
+    return getNameFromRef(ref);
+  },
 
-  // Generates Rust doc comments
   generateDoc: function(description) {
     if (!description) return "";
     return description
@@ -179,67 +177,81 @@ module.exports = {
       .join("\n///\n");
   },
 
-  // Checks if a message is a command (sent by the client)
   isCommand: function(message) {
-    return isSend(message);
+    if (!message) return false;
+    const getRefName = this?.getNameFromRef || getNameFromRef;
+    const name = message.name || getRefName(message.$ref);
+    return isSend({ ...message, name });
   },
 
-  // Checks if a message is an event (received by the client)
   isEvent: function(message) {
-    return isReceive(message);
+    if (!message) return false;
+    const getRefName = this?.getNameFromRef || getNameFromRef;
+    const name = message.name || getRefName(message.$ref);
+    return isReceive({ ...message, name });
   },
 
-  isSend: isSend,
-  isReceive: isReceive,
+  isSend,
+  isReceive,
 
-  // Retrieves all unique schemas from messages
   getAllSchemas: function(asyncapi) {
-    const schemas = {};
+    const schemas = new Set();
+    const getRefName = this?.getNameFromRef || getNameFromRef;
+
+    if (asyncapi?.components?.schemas) {
+      Object.keys(asyncapi.components.schemas).forEach(name => schemas.add(name));
+    }
 
     if (asyncapi?.components?.messages) {
-      Object.entries(asyncapi.components.messages).forEach(([name, message]) => {
-        const payload = message?.payload?.$ref ? resolveSchema(asyncapi, message.payload.$ref) : message?.payload;
-        if (payload) {
-          schemas[name] = payload;
+      Object.values(asyncapi.components.messages).forEach(msg => {
+        if (msg.payload?.$ref) {
+          schemas.add(getRefName(msg.payload.$ref));
+        }
+        if (msg.payload?.properties) {
+          Object.values(msg.payload.properties).forEach(prop => {
+            if (prop.$ref) {
+              schemas.add(getRefName(prop.$ref));
+            }
+          });
         }
       });
     }
 
-    return schemas;
+    return Array.from(schemas);
   },
 
-  // Retrieves all channels
   getAllChannels: function(asyncapi) {
     return Object.keys(asyncapi?.channels || {});
   },
 
-  // Retrieves all operations
   getAllOperations: function(asyncapi) {
     return Object.keys(asyncapi?.operations || {});
   },
 
-  // Retrieves messages from a channel
   getChannelMessages: function(asyncapi, channelName) {
     const channel = asyncapi?.channels?.[channelName];
     if (!channel) return [];
 
     if (Array.isArray(channel.messages)) {
-      return channel.messages.map(message => {
-        if (typeof message === "string") {
-          return asyncapi?.channels?.[channelName]?.messages?.find(item => item && typeof item === "object" && (item.name || getNameFromRef(item.$ref)) === message) || null;
-        }
-        return message;
-      }).filter(Boolean);
+      return channel.messages
+        .map(message => {
+          if (typeof message === "string") {
+            return asyncapi?.channels?.[channelName]?.messages?.find(item => item && typeof item === "object" && (item.name || getNameFromRef(item.$ref)) === message) || null;
+          }
+          return message;
+        })
+        .filter(Boolean);
     }
 
     if (channel.messages && typeof channel.messages === "object") {
-      return Object.values(channel.messages).map(message => resolveMessage(asyncapi, message) || message).filter(Boolean);
+      return Object.values(channel.messages)
+        .map(message => resolveMessage(asyncapi, message) || message)
+        .filter(Boolean);
     }
 
     return [];
   },
 
-  // Retrieves operations from a channel
   getChannelOperations: function(asyncapi, channelName) {
     const operations = [];
     if (!asyncapi?.operations) return operations;
@@ -257,7 +269,6 @@ module.exports = {
 
   getOperationMessages: function(asyncapi, op) {
     if (!op?.messages) return [];
-
     return op.messages
       .map(messageRef => resolveMessage(asyncapi, messageRef))
       .filter(Boolean);
