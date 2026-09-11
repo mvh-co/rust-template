@@ -19,7 +19,7 @@ type WsSender = futures_util::stream::SplitSink<
     tokio_tungstenite::tungstenite::Message,
 >;
 
-/// WebSocket client for {{asyncapi.info.title}}
+/// WebSocket client for {{asyncapi._json.info.title}}
 pub struct AsyncApiClient {
     url: String,
     sender: Option<Arc<futures_util::lock::Mutex<WsSender>>>,

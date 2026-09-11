@@ -1,12 +1,12 @@
 [package]
-name = "{{ asyncapi.info.title | toSlug }}-sdk"
-version = "{{ asyncapi.info.version }}"
+name = "{{ asyncapi._json.info.title | toSlug }}-sdk"
+version = "{{ asyncapi._json.info.version }}"
 edition = "2021"
-{% if asyncapi.info.description %}
-description = "{{ asyncapi.info.description }}"
+{% if asyncapi._json.info.description %}
+description = "{{ asyncapi._json.info.description }}"
 {% endif %}
-{% if asyncapi.info.license.name %}
-license = "{{ asyncapi.info.license.name }}"
+{% if asyncapi._json.info.license.name %}
+license = "{{ asyncapi._json.info.license.name }}"
 {% endif %}
 
 [dependencies]

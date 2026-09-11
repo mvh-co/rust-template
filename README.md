@@ -4,10 +4,12 @@ This repository generates a minimal Rust WebSocket client from an AsyncAPI docum
 
 ## Validate the IQ Option demo spec
 
-The current AsyncAPI generator used by this repo targets AsyncAPI 2.6.x, so the fixture in `test/iqoption.yaml` is written in that format. Run the generator and then compile the generated crate:
+The current AsyncAPI generator used by this repo targets AsyncAPI 2.6.x, so the fixture in `test/iqoption.yaml` is written in that format. The local template packages need their own dependencies installed before generation, so run the template installs first and then compile the generated crate:
 
 ```bash
 npm install
+npm install --prefix ./templates
+npm install --prefix ./templates/template
 rm -rf /tmp/out
 npx @asyncapi/generator ./test/iqoption.yaml ./templates -o /tmp/out -p server=production
 cargo check --manifest-path /tmp/out/Cargo.toml

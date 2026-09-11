@@ -4,26 +4,26 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
-{% for messageKey, message in asyncapi.components.messages %}
+{% for messageKey, message in asyncapi._json.components.messages %}
 {% set payload = message.payload | resolveMessagePayload(asyncapi) %}
 {% if payload and payload.additionalProperties %}
-{{ generateDoc(payload.description) }}
+{{ payload.description | generateDoc }}
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct {{ messageKey | toPascalCase }}(pub serde_json::Value);
 {% else %}
-{{ generateDoc(payload.description if payload else message.description) }}
+{{ (payload.description if payload else message.description) | generateDoc }}
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct {{ messageKey | toPascalCase }} {
     {% for propertyName, property in payload.properties %}
-    {{ generateDoc(property.description) }}
-    {% if isConst(property) %}
+    {{ property.description | generateDoc }}
+    {% if property | isConst %}
     #[serde(default)]
-    pub {{ propertyName | toSnakeCase }}: {{ mapType(property.type, property.format, property) }},
-    {% elif isRequired(payload.required, propertyName) %}
-    pub {{ propertyName | toSnakeCase }}: {{ mapType(property.type, property.format, property) }},
+    pub {{ propertyName | toSnakeCase }}: {{ property.type | mapType(property.format, property) }},
+    {% elif payload.required | isRequired(propertyName) %}
+    pub {{ propertyName | toSnakeCase }}: {{ property.type | mapType(property.format, property) }},
     {% else %}
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub {{ propertyName | toSnakeCase }}: Option<{{ mapType(property.type, property.format, property) }}>,
+    pub {{ propertyName | toSnakeCase }}: Option<{{ property.type | mapType(property.format, property) }}>,
     {% endif %}
     {% endfor %}
 }

@@ -1,13 +1,13 @@
-//! {{ asyncapi.info.title }} WebSocket SDK
+//! {{ asyncapi._json.info.title }} WebSocket SDK
 //!
-//! Generic Rust client generated from AsyncAPI specification (v{{ asyncapi.info.version }}).
+//! Generic Rust client generated from AsyncAPI specification (v{{ asyncapi._json.info.version }}).
 //! This SDK provides a WebSocket client for the API described in the specification.
 //!
 //! ## Example
 //!
-{% set selectedServer = asyncapi.servers[server] %}
+{% set selectedServer = asyncapi._json.servers[server] %}
 //! ```rust,no_run
-//! use {{ asyncapi.info.title | toSnakeCase }}_sdk::ws::client::AsyncApiClient;
+//! use {{ asyncapi._json.info.title | toSnakeCase }}_sdk::ws::client::AsyncApiClient;
 //!
 //! #[tokio::main]
 //! async fn main() {
