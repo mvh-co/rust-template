@@ -96,7 +96,7 @@ impl AsyncApiClient {
         &mut self,
         {{#if this.messages}}
             {{#each this.messages}}
-                {{#if (isCommand this)}}
+                {{#if (isSend this)}}
                     payload: Value,
                 {{/if}}
             {{/each}}

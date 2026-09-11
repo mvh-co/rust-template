@@ -12,11 +12,14 @@
             "generateDoc": "helpers.js",
             "isCommand": "helpers.js",
             "isEvent": "helpers.js",
+            "isSend": "helpers.js",
+            "isReceive": "helpers.js",
             "getAllSchemas": "helpers.js",
             "getAllChannels": "helpers.js",
             "getAllOperations": "helpers.js",
             "getChannelMessages": "helpers.js",
-            "getChannelOperations": "helpers.js"
+            "getChannelOperations": "helpers.js",
+            "getOperationMessages": "helpers.js"
         },
         "supportedProtocols": [
             "ws",
