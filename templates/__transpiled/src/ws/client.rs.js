@@ -2,7 +2,7 @@
 
 require('source-map-support/register');
 var generatorReactSdk = require('@asyncapi/generator-react-sdk');
-var jsxRuntime = require('/home/runner/.npm/_npx/0929aae77d023606/node_modules/react/cjs/react-jsx-runtime.production.min.js');
+var jsxRuntime = require('/home/runner/work/rust-template/rust-template/node_modules/react/cjs/react-jsx-runtime.production.min.js');
 
 const toSnakeCase = value => String(value || '').replace(/([A-Z])/g, '_$1').toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_').replace(/^_+|_+$/g, '') || 'client';
 const getDocument = asyncapi => (asyncapi === null || asyncapi === void 0 ? void 0 : asyncapi._json) || asyncapi || {};

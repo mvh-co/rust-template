@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const Module = require('node:module');
 const { getAllOperations, getOperationMessages } = require('../helpers.js');
 
 const readTemplate = relativePath =>
@@ -72,4 +73,74 @@ test('helpers resolve AsyncAPI v3 operations and message refs', () => {
   const receiveMessages = getOperationMessages(asyncapi, operations[1]);
   assert.equal(sendMessages[0].name, 'subscribe');
   assert.equal(receiveMessages[0].name, 'quote');
+});
+
+test('types template deduplicates colliding Rust struct names', () => {
+  const originalLoad = Module._load;
+  Module._load = function patchedLoad(request, parent, isMain) {
+    if (request === 'source-map-support/register') return {};
+    return originalLoad.call(this, request, parent, isMain);
+  };
+
+  try {
+    const TypesRs = require('../templates/__transpiled/src/ws/types.rs.js');
+    const asyncapi = {
+      asyncapi: '3.0.0',
+      channels: {
+        market: {
+          address: 'market',
+          messages: {
+            authResult: {
+              name: 'authResult',
+              payload: {
+                type: 'object',
+                properties: {
+                  status: { type: 'string' },
+                },
+              },
+            },
+            coreEvent: {
+              name: 'coreEvent',
+              payload: {
+                type: 'object',
+                properties: {
+                  sequence: { type: 'integer', format: 'int64' },
+                },
+              },
+            },
+          },
+        },
+      },
+      components: {
+        messages: {
+          AuthResult: {
+            name: 'AuthResult',
+            payload: {
+              type: 'object',
+              properties: {
+                status: { type: 'string' },
+                user_id: { type: 'integer', format: 'int64' },
+              },
+            },
+          },
+          CoreEvent: {
+            name: 'CoreEvent',
+            payload: {
+              type: 'object',
+              properties: {
+                sequence: { type: 'integer', format: 'int64' },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const rendered = TypesRs({ asyncapi });
+    const generated = String(rendered.props.children.props.children);
+    assert.equal((generated.match(/pub struct AuthResult/g) || []).length, 1);
+    assert.equal((generated.match(/pub struct CoreEvent/g) || []).length, 1);
+  } finally {
+    Module._load = originalLoad;
+  }
 });
