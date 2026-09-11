@@ -2,19 +2,25 @@
     "name": "@mvh-co/asyncapi-rust-template",
     "version": "1.0.0",
     "description": "Generic AsyncAPI template for generating a Rust WebSocket client",
-    "asyncapi": {
-        "generator": {
-            "templates": {
-                "cargo": "templates/Cargo.toml.hbs",
-                "lib": "templates/lib.hbs",
-                "mod": "templates/mod.hbs",
-                "types": "templates/types.hbs",
-                "client": "templates/client.hbs"
-            },
-            "output": {
-                "path": "./src"
-            },
-            "helpers": "helpers.js"
-        }
+    "generator": {
+        "filters": {
+            "mapType": "helpers.js",
+            "toPascalCase": "helpers.js",
+            "toSnakeCase": "helpers.js",
+            "toSlug": "helpers.js",
+            "getNameFromRef": "helpers.js",
+            "generateDoc": "helpers.js",
+            "isCommand": "helpers.js",
+            "isEvent": "helpers.js",
+            "getAllSchemas": "helpers.js",
+            "getAllChannels": "helpers.js",
+            "getAllOperations": "helpers.js",
+            "getChannelMessages": "helpers.js",
+            "getChannelOperations": "helpers.js"
+        },
+        "supportedProtocols": [
+            "ws",
+            "wss"
+        ]
     }
 }
