@@ -4,32 +4,31 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
-{{#each (getAllSchemas asyncapi)}}
-{{#with (lookup ../asyncapi.components.schemas this)}}
-{{generateDoc this.description}}
+{{#each asyncapi.components.messages as |message messageKey|}}
+{{#with (resolveMessagePayload @root.asyncapi message.payload)}}
+{{#if additionalProperties}}
+{{generateDoc description}}
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct {{this.name | toPascalCase}} {
-    {{#each this.properties}}
+pub struct {{messageKey | toPascalCase}}(pub serde_json::Value);
+{{else}}
+{{generateDoc description}}
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct {{messageKey | toPascalCase}} {
+    {{#each properties}}
     {{generateDoc this.description}}
-    pub {{@key | toSnakeCase}}: {{mapType this.type this.format}},
+    {{#if (isConst this)}}
+    #[serde(default)]
+    pub {{@key | toSnakeCase}}: {{mapType this.type this.format this}},
+    {{else if (isRequired ../required @key)}}
+    pub {{@key | toSnakeCase}}: {{mapType this.type this.format this}},
+    {{else}}
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub {{@key | toSnakeCase}}: Option<{{mapType this.type this.format this}}>,
+    {{/if}}
     {{/each}}
 }
-{{/with}}
-{{/each}}
-
-{{#each asyncapi.components.messages}}
-{{#if this.payload}}
-{{#with (lookup ../asyncapi.components.schemas (getNameFromRef this.payload.$ref))}}
-{{generateDoc this.payload.description}}
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct {{this.name | toPascalCase}} {
-    {{#each this.payload.properties}}
-    {{generateDoc this.description}}
-    pub {{@key | toSnakeCase}}: {{mapType this.type this.format}},
-    {{/each}}
-}
-{{/with}}
 {{/if}}
+{{/with}}
 {{/each}}
 
 /// Generic message envelope for AsyncAPI

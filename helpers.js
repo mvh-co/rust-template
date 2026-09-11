@@ -50,6 +50,29 @@ function resolveSchema(asyncapi, schemaRef) {
   return asyncapi?.components?.schemas?.[schemaRef] || null;
 }
 
+function resolveMessagePayload(asyncapi, payload) {
+  if (!payload) return null;
+
+  if (typeof payload === "object") {
+    if (payload.$ref) return resolveSchema(asyncapi, payload.$ref);
+    return payload;
+  }
+
+  if (typeof payload === "string") {
+    return resolveSchema(asyncapi, payload);
+  }
+
+  return null;
+}
+
+function isRequired(required, propertyName) {
+  return Array.isArray(required) && required.includes(propertyName);
+}
+
+function isConstProperty(property) {
+  return !!property && property.const !== undefined;
+}
+
 function resolveMessage(asyncapi, messageRef) {
   if (!messageRef) return null;
 
@@ -100,11 +123,23 @@ module.exports = {
       return "serde_json::Value";
     }
 
-    if (itemSchema.const !== undefined || Array.isArray(itemSchema.enum)) {
-      if (itemSchema.type) {
-        return module.exports.mapType(itemSchema.type, itemSchema.format, itemSchema);
+    if (itemSchema.const !== undefined) {
+      if (itemSchema.type !== undefined) {
+        const { const: _const, enum: _enum, ...baseSchema } = itemSchema;
+        return module.exports.mapType(itemSchema.type, itemSchema.format, baseSchema);
       }
-      if (Array.isArray(itemSchema.enum) && itemSchema.enum.length > 0) {
+      if (typeof itemSchema.const === "string") return "String";
+      if (typeof itemSchema.const === "number") return Number.isInteger(itemSchema.const) ? "i64" : "f64";
+      if (typeof itemSchema.const === "boolean") return "bool";
+      return "serde_json::Value";
+    }
+
+    if (Array.isArray(itemSchema.enum)) {
+      if (itemSchema.type !== undefined) {
+        const { const: _const, enum: _enum, ...baseSchema } = itemSchema;
+        return module.exports.mapType(itemSchema.type, itemSchema.format, baseSchema);
+      }
+      if (itemSchema.enum.length > 0) {
         const firstEnumValue = itemSchema.enum[0];
         if (typeof firstEnumValue === "string") return "String";
         if (typeof firstEnumValue === "number") return Number.isInteger(firstEnumValue) ? "i64" : "f64";
@@ -139,11 +174,13 @@ module.exports = {
 
   toPascalCase: function(name) {
     if (!name) return "";
-    return name
-      .replace(/[^a-zA-Z0-9]/g, " ")
-      .split(" ")
+    return String(name)
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/[^a-zA-Z0-9]+/g, " ")
+      .trim()
+      .split(/\s+/)
       .filter(word => word.length > 0)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join("");
   },
 
@@ -167,6 +204,22 @@ module.exports = {
 
   getNameFromRef: function(ref) {
     return getNameFromRef(ref);
+  },
+
+  resolveSchema: function(asyncapi, schemaRef) {
+    return resolveSchema(asyncapi, schemaRef);
+  },
+
+  resolveMessagePayload: function(asyncapi, payload) {
+    return resolveMessagePayload(asyncapi, payload);
+  },
+
+  isRequired: function(required, propertyName) {
+    return isRequired(required, propertyName);
+  },
+
+  isConst: function(property) {
+    return isConstProperty(property);
   },
 
   generateDoc: function(description) {
