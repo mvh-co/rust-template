@@ -2,6 +2,9 @@
   "name": "@mvh-co/asyncapi-rust-template",
   "version": "1.0.0",
   "description": "Generic AsyncAPI template for generating a Rust WebSocket client",
+  "scripts": {
+    "test": "node --test"
+  },
   "generator": {
     "filters": {
       "mapType": "helpers.js",
