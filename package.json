@@ -4,7 +4,7 @@
   "description": "Generic AsyncAPI template for generating a Rust WebSocket client",
   "scripts": {
     "test": "node --test",
-    "test:iqoption": "npm install --prefix ./templates && npm install --prefix ./templates/template && rm -rf /tmp/out && npx @asyncapi/cli generate fromTemplate ./test/iqoption.yaml ./templates -o /tmp/out -p server=production && cargo check --manifest-path /tmp/out/Cargo.toml"
+    "test:demo": "npm install --prefix ./templates && npm install --prefix ./templates/template && rm -rf /tmp/out && npx @asyncapi/cli generate fromTemplate ./test/demo.yaml ./templates -o /tmp/out -p server=production && cargo check --manifest-path /tmp/out/Cargo.toml"
   },
   "devDependencies": {
     "@asyncapi/cli": "^6.0.2",

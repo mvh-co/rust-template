@@ -2,16 +2,16 @@
 
 This repository generates a minimal Rust WebSocket client from an AsyncAPI document.
 
-## Validate the IQ Option demo spec
+## Validate the demo spec
 
-The template supports AsyncAPI 3.0.0 / 3.1.0 and resolves operation metadata from `components.operations` with `action: send|receive` plus channel metadata under `components.channels` / `channels[*].address`. The demo fixture in `test/iqoption.yaml` uses that v3 shape. The generated client uses `tokio-tungstenite` with the `rustls-tls-native-roots` feature, so it does not require OpenSSL (`pkg-config`/`libssl-dev`) at build time. The local template packages need their own dependencies installed before generation, so run the template installs first and then compile the generated crate:
+The template supports AsyncAPI 3.0.0 / 3.1.0 and resolves operation metadata from `components.operations` with `action: send|receive` plus channel metadata under `components.channels` / `channels[*].address`. The demo fixture in `test/demo.yaml` uses that v3 shape. The generated client uses `tokio-tungstenite` with the `rustls-tls-native-roots` feature, so it does not require OpenSSL (`pkg-config`/`libssl-dev`) at build time. The local template packages need their own dependencies installed before generation, so run the template installs first and then compile the generated crate:
 
 ```bash
 npm install
 npm install --prefix ./templates
 npm install --prefix ./templates/template
 rm -rf /tmp/out
-npx @asyncapi/cli generate fromTemplate ./test/iqoption.yaml ./templates -o /tmp/out -p server=production
+npx @asyncapi/cli generate fromTemplate ./test/demo.yaml ./templates -o /tmp/out -p server=production
 cargo check --manifest-path /tmp/out/Cargo.toml
 ```
 

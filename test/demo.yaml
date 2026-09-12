@@ -1,17 +1,17 @@
 asyncapi: 3.1.0
 info:
-  title: IQ Option Demo
+  title: WebSocket Demo
   version: '1.0.0'
   description: |
-    Demo AsyncAPI 3.1 spec for the IQ Option WebSocket API.
+    Demo AsyncAPI 3.1 spec for a generic WebSocket API.
     This fixture exercises the multi-line description path used by the generated Cargo.toml.
 defaultContentType: application/json
 servers:
   production:
-    host: ws.iqoption.com
+    host: ws.example.com
     protocol: ws
     pathname: /ws
-    description: Production IQ Option WebSocket endpoint.
+    description: Production WebSocket endpoint.
 channels:
   market:
     address: market
