@@ -35,7 +35,7 @@ export default function CargoToml({ asyncapi }) {
     '',
     '[dependencies]',
     'tokio = { version = "1.0", features = ["full"] }',
-    'tokio-tungstenite = { version = "0.23", features = ["native-tls"] }',
+    'tokio-tungstenite = { version = "0.23", features = ["rustls-tls-native-roots"] }',
     'serde = { version = "1.0", features = ["derive"] }',
     'serde_json = "1.0"',
     'futures-util = "0.3"',

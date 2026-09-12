@@ -19,7 +19,7 @@ function CargoToml({
   const version = info.version || '1.0.0';
   const description = info.description || '';
   const licenseName = info.license && info.license.name || '';
-  const lines = ['[package]', `name = "${slugify(title)}-sdk"`, `version = "${version}"`, 'edition = "2021"', description ? `description = "${escapeTomlString(description)}"` : '', licenseName ? `license = "${escapeTomlString(licenseName)}"` : '', '', '[dependencies]', 'tokio = { version = "1.0", features = ["full"] }', 'tokio-tungstenite = { version = "0.23", features = ["native-tls"] }', 'serde = { version = "1.0", features = ["derive"] }', 'serde_json = "1.0"', 'futures-util = "0.3"', 'thiserror = "1.0"', 'log = "0.4"', 'chrono = "0.4"', ''].filter(Boolean).join('\n');
+  const lines = ['[package]', `name = "${slugify(title)}-sdk"`, `version = "${version}"`, 'edition = "2021"', description ? `description = "${escapeTomlString(description)}"` : '', licenseName ? `license = "${escapeTomlString(licenseName)}"` : '', '', '[dependencies]', 'tokio = { version = "1.0", features = ["full"] }', 'tokio-tungstenite = { version = "0.23", features = ["rustls-tls-native-roots"] }', 'serde = { version = "1.0", features = ["derive"] }', 'serde_json = "1.0"', 'futures-util = "0.3"', 'thiserror = "1.0"', 'log = "0.4"', 'chrono = "0.4"', ''].filter(Boolean).join('\n');
   return /*#__PURE__*/jsxRuntime.jsx(generatorReactSdk.File, {
     name: "Cargo.toml",
     children: /*#__PURE__*/jsxRuntime.jsx(generatorReactSdk.Text, {
