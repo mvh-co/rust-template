@@ -4,7 +4,7 @@ require('source-map-support/register');
 var generatorReactSdk = require('@asyncapi/generator-react-sdk');
 var jsxRuntime = require('/home/runner/work/rust-template/rust-template/node_modules/react/cjs/react-jsx-runtime.production.min.js');
 
-const escapeTomlString = (value = '') => String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+const escapeTomlString = (value = '') => String(value).replace(/\r?\n/g, ' ').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 const slugify = value => {
   const normalized = String(value || 'asyncapi-client').trim().toLowerCase();
   const sanitized = Array.from(normalized).map(character => /[a-z0-9]/.test(character) ? character : '-').join('').split('-').filter(Boolean).join('-');

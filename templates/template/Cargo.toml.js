@@ -1,6 +1,7 @@
 import { File, Text } from '@asyncapi/generator-react-sdk';
 
 const escapeTomlString = (value = '') => String(value)
+  .replace(/\r?\n/g, ' ')
   .replace(/\\/g, '\\\\')
   .replace(/"/g, '\\"');
 
