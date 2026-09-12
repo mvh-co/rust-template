@@ -4,7 +4,7 @@ This repository generates a minimal Rust WebSocket client from an AsyncAPI docum
 
 ## Validate the IQ Option demo spec
 
-The template supports AsyncAPI 3.0.x and resolves operation metadata from `components.operations` with `action: send|receive` plus channel metadata under `components.channels` / `channels[*].address`. The demo fixture in `test/iqoption.yaml` uses that v3 shape. The generated client uses `tokio-tungstenite` with the `rustls-tls-native-roots` feature, so it does not require OpenSSL (`pkg-config`/`libssl-dev`) at build time. The local template packages need their own dependencies installed before generation, so run the template installs first and then compile the generated crate:
+The template supports AsyncAPI 3.0.0 / 3.1.0 and resolves operation metadata from `components.operations` with `action: send|receive` plus channel metadata under `components.channels` / `channels[*].address`. The demo fixture in `test/iqoption.yaml` uses that v3 shape. The generated client uses `tokio-tungstenite` with the `rustls-tls-native-roots` feature, so it does not require OpenSSL (`pkg-config`/`libssl-dev`) at build time. The local template packages need their own dependencies installed before generation, so run the template installs first and then compile the generated crate:
 
 ```bash
 npm install

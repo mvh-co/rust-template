@@ -27,7 +27,7 @@ test('client templates use the generated operation list and safe handler storage
 
 test('helpers resolve AsyncAPI v3 operations and message refs', () => {
   const asyncapi = {
-    asyncapi: '3.0.0',
+    asyncapi: '3.1.0',
     channels: {
       market: {
         address: 'market',
@@ -82,7 +82,7 @@ test('helpers resolve AsyncAPI v3 operations and message refs', () => {
 test('cargo template escapes multiline descriptions in TOML strings', () => {
   const CargoToml = require('../templates/__transpiled/Cargo.toml.js');
   const asyncapi = {
-    asyncapi: '3.0.0',
+    asyncapi: '3.1.0',
     info: {
       title: 'IQ Option Demo',
       version: '1.0.0',
@@ -111,7 +111,7 @@ test('types template deduplicates colliding Rust struct names', () => {
   try {
     const TypesRs = require('../templates/__transpiled/src/ws/types.rs.js');
     const asyncapi = {
-      asyncapi: '3.0.0',
+      asyncapi: '3.1.0',
       channels: {
         market: {
           address: 'market',

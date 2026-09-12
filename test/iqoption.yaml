@@ -1,9 +1,9 @@
-asyncapi: 3.0.0
+asyncapi: 3.1.0
 info:
   title: IQ Option Demo
   version: '1.0.0'
   description: |
-    Demo AsyncAPI 3.0 spec for the IQ Option WebSocket API.
+    Demo AsyncAPI 3.1 spec for the IQ Option WebSocket API.
     This fixture exercises the multi-line description path used by the generated Cargo.toml.
 defaultContentType: application/json
 servers:
