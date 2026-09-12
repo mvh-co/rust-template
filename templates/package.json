@@ -2,6 +2,15 @@
   "name": "@mvh-co/asyncapi-rust-template",
   "version": "1.0.0",
   "description": "Generic AsyncAPI template for generating a Rust WebSocket client",
+  "scripts": {
+    "postinstall": "node ../scripts/patch-modelina-esm.js"
+  },
+  "dependencies": {
+    "@asyncapi/modelina": "^5.10.1"
+  },
+  "overrides": {
+    "tslib": "2.7.0"
+  },
   "generator": {
     "apiVersion": "v3",
     "parameters": {

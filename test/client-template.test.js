@@ -101,7 +101,7 @@ test('cargo template escapes multiline descriptions in TOML strings', () => {
   assert.ok(!generated.includes('description = "AsyncAPI generated from the WebSocket client used by the package\n@example/websocket-client'));
 });
 
-test('types template deduplicates colliding Rust struct names', () => {
+test('types template deduplicates colliding Rust struct names', async () => {
   const originalLoad = Module._load;
   Module._load = function patchedLoad(request, parent, isMain) {
     if (request === 'source-map-support/register') return {};
@@ -162,7 +162,7 @@ test('types template deduplicates colliding Rust struct names', () => {
       },
     };
 
-    const rendered = TypesRs({ asyncapi });
+    const rendered = await TypesRs({ asyncapi });
     const generated = String(rendered.props.children.props.children);
     assert.equal((generated.match(/pub struct AuthResult/g) || []).length, 1);
     assert.equal((generated.match(/pub struct CoreEvent/g) || []).length, 1);

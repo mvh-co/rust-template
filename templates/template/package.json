@@ -38,5 +38,14 @@
       "ws",
       "wss"
     ]
+  },
+  "scripts": {
+    "postinstall": "node ../../scripts/patch-modelina-esm.js"
+  },
+  "dependencies": {
+    "@asyncapi/modelina": "^5.10.1"
+  },
+  "overrides": {
+    "tslib": "2.7.0"
   }
 }
