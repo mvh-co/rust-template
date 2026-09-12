@@ -1,90 +1,108 @@
-import { File, Text } from '@asyncapi/generator-react-sdk';
+const fs = require('node:fs');
+const path = require('node:path');
+const generatorReactSdk = require('@asyncapi/generator-react-sdk');
+const jsxRuntime = require('react/jsx-runtime');
 
-const upperCamel = (value) => String(value || '')
-  .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-  .replace(/[^a-zA-Z0-9]+/g, ' ')
-  .trim()
-  .split(/\s+/)
-  .filter(Boolean)
-  .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-  .join('') || 'Message';
+const getRustGenerator = () => {
+  const candidatePaths = [
+    path.resolve(__dirname, '../../node_modules/@asyncapi/modelina/lib/cjs/index.js'),
+    path.resolve(process.cwd(), 'templates/template/node_modules/@asyncapi/modelina/lib/cjs/index.js'),
+    path.resolve(process.cwd(), 'templates/node_modules/@asyncapi/modelina/lib/cjs/index.js'),
+    path.resolve(process.cwd(), 'node_modules/@asyncapi/modelina/lib/cjs/index.js')
+  ];
 
-const toSnakeCase = (value) => String(value || '')
-  .replace(/([A-Z])/g, '_$1')
-  .toLowerCase()
-  .replace(/[^a-zA-Z0-9_]/g, '_')
-  .replace(/^_+|_+$/g, '') || 'message';
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      return new (require(candidate).RustGenerator)();
+    }
+  }
 
-const mapRustType = (schema = {}) => {
-  if (schema.additionalProperties === true) return 'serde_json::Value';
-  if (schema.const !== undefined) {
-    if (typeof schema.const === 'string') return 'String';
-    if (typeof schema.const === 'number') return Number.isInteger(schema.const) ? 'i64' : 'f64';
-    if (typeof schema.const === 'boolean') return 'bool';
-    return 'serde_json::Value';
+  try {
+    return new (require('@asyncapi/modelina/lib/cjs/index.js').RustGenerator)();
+  } catch (error) {
+    return new (require('@asyncapi/modelina').RustGenerator)();
   }
-  if (Array.isArray(schema.enum) && schema.enum.length > 0) {
-    const first = schema.enum[0];
-    if (typeof first === 'string') return 'String';
-    if (typeof first === 'number') return Number.isInteger(first) ? 'i64' : 'f64';
-    if (typeof first === 'boolean') return 'bool';
+};
+
+const resolveReference = (doc, ref) => {
+  if (!ref || typeof ref !== 'string' || !ref.startsWith('#/')) {
+    return undefined;
   }
-  if (schema.type === 'array') {
-    const inner = mapRustType(schema.items || { type: 'string' });
-    return `Vec<${inner}>`;
+
+  const segments = ref
+    .replace(/^#\//, '')
+    .split('/')
+    .map(segment => segment.replace(/~1/g, '/').replace(/~0/g, '~'));
+
+  let current = doc;
+  for (const segment of segments) {
+    if (!current || typeof current !== 'object') {
+      return undefined;
+    }
+    current = current[segment];
   }
-  if (schema.type === 'integer') return schema.format === 'int32' ? 'i32' : 'i64';
-  if (schema.type === 'number') return 'f64';
-  if (schema.type === 'boolean') return 'bool';
-  if (schema.type === 'string') return 'String';
-  return 'serde_json::Value';
+
+  return current;
 };
 
 const resolveMessagePayload = (doc, message) => {
-  if (!message) return null;
+  if (!message || typeof message !== 'object') {
+    return null;
+  }
+
   if (message.$ref && typeof message.$ref === 'string') {
-    const name = message.$ref.split('/').pop();
-    const componentMessage = doc.components && doc.components.messages && doc.components.messages[name];
-    if (!componentMessage) return null;
+    const refName = message.$ref.split('/').pop();
+    const componentMessage = (doc.components && doc.components.messages && doc.components.messages[refName]) || resolveReference(doc, message.$ref);
     return resolveMessagePayload(doc, componentMessage);
   }
+
   if (message.payload) return resolveMessagePayload(doc, message.payload);
   if (message.content) {
     const content = message.content;
-    if (content && content.schema) return content.schema;
-    if (content && content.oneOf) return { oneOf: content.oneOf };
+    if (content && content.schema) return resolveMessagePayload(doc, content.schema);
+    if (content && content.oneOf) {
+      return { oneOf: content.oneOf.map(item => resolveMessagePayload(doc, item) || item) };
+    }
     if (content && typeof content === 'object') {
       const first = Object.values(content)[0];
-      if (first && typeof first === 'object') return resolveMessagePayload(doc, first);
+      if (first && typeof first === 'object') {
+        return resolveMessagePayload(doc, first);
+      }
     }
   }
-  if (message.schema) return message.schema;
+  if (message.schema) return resolveMessagePayload(doc, message.schema);
   return message;
 };
 
-const collectMessages = (doc) => {
-  const messageMap = {};
-  const seenStructNames = new Set();
+const normalizeModelKey = (value) => String(value || 'message')
+  .replace(/[^a-zA-Z0-9]+/g, '')
+  .toLowerCase() || 'message';
 
-  const addMessage = (key, value) => {
-    if (!value || typeof value !== 'object') return;
+const collectModelPayloads = (doc) => {
+  const payloads = [];
+  const seen = new Set();
 
-    let messageName = key || value.name || 'message';
-    let resolvedValue = value;
-
-    if (value.$ref && typeof value.$ref === 'string') {
-      const refName = value.$ref.split('/').pop();
-      const resolved = (doc.components && doc.components.messages && doc.components.messages[refName]) || null;
-      if (!resolved) return;
-      messageName = refName;
-      resolvedValue = resolved;
+  const addMessage = (messageKey, value) => {
+    if (!value || typeof value !== 'object') {
+      return;
     }
 
-    const structName = upperCamel(messageName);
-    if (seenStructNames.has(structName)) return;
+    const payload = resolveMessagePayload(doc, value);
+    if (!payload || typeof payload !== 'object') {
+      return;
+    }
 
-    seenStructNames.add(structName);
-    messageMap[structName] = resolvedValue;
+    const title = String(value.title || value.name || messageKey || 'Message');
+    const modelKey = normalizeModelKey(title);
+    if (seen.has(modelKey)) {
+      return;
+    }
+
+    seen.add(modelKey);
+    payloads.push({
+      title,
+      schema: { ...payload, title }
+    });
   };
 
   const componentMessages = (doc.components && doc.components.messages) || {};
@@ -93,25 +111,52 @@ const collectMessages = (doc) => {
   const channels = doc.channels || {};
   Object.entries(channels).forEach(([channelName, channel]) => {
     const messageList = channel.messages || channel.message || {};
+
     if (Array.isArray(messageList)) {
       messageList.forEach((entry) => {
-        if (entry && typeof entry === 'object' && entry.$ref) {
-          const refName = entry.$ref.split('/').pop();
-          if (doc.components && doc.components.messages && doc.components.messages[refName]) {
-            addMessage(refName, doc.components.messages[refName]);
-          }
+        if (!entry || typeof entry !== 'object') {
+          return;
         }
+
+        const refName = entry.$ref && typeof entry.$ref === 'string' ? entry.$ref.split('/').pop() : null;
+        const resolvedEntry = refName && doc.components && doc.components.messages && doc.components.messages[refName]
+          ? doc.components.messages[refName]
+          : entry;
+        addMessage(refName || entry.name || channelName, resolvedEntry);
       });
       return;
     }
-    Object.entries(messageList).forEach(([key, value]) => addMessage(key, value));
+
+    Object.entries(messageList).forEach(([messageKey, value]) => {
+      if (!value || typeof value !== 'object') {
+        return;
+      }
+
+      const refName = value.$ref && typeof value.$ref === 'string' ? value.$ref.split('/').pop() : null;
+      const resolvedEntry = refName && doc.components && doc.components.messages && doc.components.messages[refName]
+        ? doc.components.messages[refName]
+        : value;
+      addMessage(messageKey, resolvedEntry);
+    });
   });
 
-  return Object.entries(messageMap);
+  return payloads;
 };
 
-export default function TypesRs({ asyncapi }) {
-  const doc = asyncapi?._json || asyncapi || {};
+async function TypesRs({ asyncapi }) {
+  const doc = (asyncapi === null || asyncapi === void 0 ? void 0 : asyncapi._json) || asyncapi || {};
+  const generator = getRustGenerator();
+  const generatedModels = [];
+
+  for (const modelPayload of collectModelPayloads(doc)) {
+    const result = await generator.generate(modelPayload.schema);
+    const generated = result.find((item) => item && typeof item.result === 'string' && item.result.trim()) || result[0];
+
+    if (generated && typeof generated.result === 'string' && generated.result.trim()) {
+      generatedModels.push(generated.result.trim());
+    }
+  }
+
   const lines = [
     '// Auto-generated types from AsyncAPI specification',
     '// DO NOT EDIT MANUALLY',
@@ -121,49 +166,27 @@ export default function TypesRs({ asyncapi }) {
     ''
   ];
 
-  collectMessages(doc).forEach(([messageKey, message]) => {
-    const payload = resolveMessagePayload(doc, message);
-    const payloadSchema = payload && typeof payload === 'object' && payload.properties ? payload : { properties: {} };
-    const properties = payloadSchema.properties || {};
-    const propertyEntries = Object.entries(properties);
-
-    if (payloadSchema.additionalProperties === true) {
-      lines.push(`/// ${messageKey} payload`);
-      lines.push('#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]');
-      lines.push(`pub struct ${upperCamel(messageKey)}(pub serde_json::Value);`);
-      lines.push('');
-      return;
-    }
-
-    lines.push(`/// ${messageKey} payload`);
+  if (generatedModels.length === 0) {
+    lines.push('/// Generic message envelope for AsyncAPI');
     lines.push('#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]');
-    lines.push(`pub struct ${upperCamel(messageKey)} {`);
-    propertyEntries.forEach(([propertyName, property]) => {
-      const rustFieldName = toSnakeCase(propertyName);
-      const rustType = mapRustType(property);
-      const required = Array.isArray(payloadSchema.required) && payloadSchema.required.includes(propertyName);
-      const fieldLine = required
-        ? `    pub ${rustFieldName}: ${rustType},`
-        : `    #[serde(skip_serializing_if = "Option::is_none")]\n    pub ${rustFieldName}: Option<${rustType}>,`;
-      lines.push(fieldLine);
-    });
+    lines.push('pub struct MessageEnvelope {');
+    lines.push('    #[serde(flatten)]');
+    lines.push('    pub payload: HashMap<String, serde_json::Value>,');
     lines.push('}');
     lines.push('');
-  });
-
-  lines.push('/// Generic message envelope for AsyncAPI');
-  lines.push('#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]');
-  lines.push('pub struct MessageEnvelope {');
-  lines.push('    #[serde(flatten)]');
-  lines.push('    pub payload: HashMap<String, serde_json::Value>,');
-  lines.push('}');
-  lines.push('');
+  } else {
+    generatedModels.forEach((model) => {
+      lines.push(...model.split('\n'));
+      lines.push('');
+    });
+  }
 
   const content = lines.join('\n');
 
-  return (
-    <File name="types.rs">
-      <Text>{content}</Text>
-    </File>
-  );
+  return jsxRuntime.jsx(generatorReactSdk.File, {
+    name: 'types.rs',
+    children: jsxRuntime.jsx(generatorReactSdk.Text, { children: content })
+  });
 }
+
+module.exports = TypesRs;
