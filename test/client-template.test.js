@@ -10,6 +10,7 @@ const readTemplate = relativePath =>
 
 test('client templates use the generated operation list and safe handler storage', () => {
   const sourceTemplate = readTemplate('templates/template/src/ws/client.rs.js');
+  const cargoTemplate = readTemplate('templates/template/Cargo.toml.js');
 
   assert.ok(sourceTemplate.includes('message_handlers: Arc<Mutex<HashMap<String, Arc<dyn Fn(Value) + Send + Sync>>>>'));
   assert.ok(sourceTemplate.includes('sender: Option<Arc<futures_util::lock::Mutex<WsSender>>>'));
@@ -17,6 +18,9 @@ test('client templates use the generated operation list and safe handler storage
   assert.ok(sourceTemplate.includes('pub async fn ${methodName}(&self, payload: Value) -> Result<(), WsError>'));
   assert.ok(sourceTemplate.includes('self.on("${messageName}", handler);'));
   assert.ok(sourceTemplate.includes('TungsteniteError(#[from] tokio_tungstenite::tungstenite::Error)'));
+  assert.ok(sourceTemplate.includes('tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>'));
+  assert.ok(cargoTemplate.includes('tokio-tungstenite = { version = "0.23", features = ["rustls-tls-native-roots"] }'));
+  assert.ok(!cargoTemplate.includes('native-tls'));
   assert.ok(!sourceTemplate.includes('IoError(#[from] std::io::Error)'));
   assert.ok(!sourceTemplate.includes('Legacy compatibility for older AsyncAPI documents'));
 });
