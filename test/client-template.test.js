@@ -75,6 +75,28 @@ test('helpers resolve AsyncAPI v3 operations and message refs', () => {
   assert.equal(receiveMessages[0].name, 'quote');
 });
 
+test('cargo template escapes multiline descriptions in TOML strings', () => {
+  const CargoToml = require('../templates/__transpiled/Cargo.toml.js');
+  const asyncapi = {
+    asyncapi: '3.0.0',
+    info: {
+      title: 'IQ Option Demo',
+      version: '1.0.0',
+      description: [
+        'AsyncAPI generated from the IQ Option WebSocket client used by the package',
+        '@mvh/iqoption. This document describes the real-time message-driven API',
+        'exposed through the persistent WebSocket endpoint used by the library.'
+      ].join('\n'),
+    },
+  };
+
+  const rendered = CargoToml({ asyncapi });
+  const generated = String(rendered.props.children.props.children);
+
+  assert.ok(generated.includes('description = "AsyncAPI generated from the IQ Option WebSocket client used by the package @mvh/iqoption. This document describes the real-time message-driven API exposed through the persistent WebSocket endpoint used by the library."'));
+  assert.ok(!generated.includes('description = "AsyncAPI generated from the IQ Option WebSocket client used by the package\n@mvh/iqoption'));
+});
+
 test('types template deduplicates colliding Rust struct names', () => {
   const originalLoad = Module._load;
   Module._load = function patchedLoad(request, parent, isMain) {
