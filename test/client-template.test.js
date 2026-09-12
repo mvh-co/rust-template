@@ -84,11 +84,11 @@ test('cargo template escapes multiline descriptions in TOML strings', () => {
   const asyncapi = {
     asyncapi: '3.1.0',
     info: {
-      title: 'IQ Option Demo',
+      title: 'WebSocket Demo',
       version: '1.0.0',
       description: [
-        'AsyncAPI generated from the IQ Option WebSocket client used by the package',
-        '@mvh/iqoption. This document describes the real-time message-driven API',
+        'AsyncAPI generated from the WebSocket client used by the package',
+        '@example/websocket-client. This document describes the real-time message-driven API',
         'exposed through the persistent WebSocket endpoint used by the library.'
       ].join('\n'),
     },
@@ -97,8 +97,8 @@ test('cargo template escapes multiline descriptions in TOML strings', () => {
   const rendered = CargoToml({ asyncapi });
   const generated = String(rendered.props.children.props.children);
 
-  assert.ok(generated.includes('description = "AsyncAPI generated from the IQ Option WebSocket client used by the package @mvh/iqoption. This document describes the real-time message-driven API exposed through the persistent WebSocket endpoint used by the library."'));
-  assert.ok(!generated.includes('description = "AsyncAPI generated from the IQ Option WebSocket client used by the package\n@mvh/iqoption'));
+  assert.ok(generated.includes('description = "AsyncAPI generated from the WebSocket client used by the package @example/websocket-client. This document describes the real-time message-driven API exposed through the persistent WebSocket endpoint used by the library."'));
+  assert.ok(!generated.includes('description = "AsyncAPI generated from the WebSocket client used by the package\n@example/websocket-client'));
 });
 
 test('types template deduplicates colliding Rust struct names', () => {
